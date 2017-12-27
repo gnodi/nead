@@ -70,7 +70,7 @@ import nead from 'nead';
 ### Dependency injector
 nead can be used as a simple dependency injector.
 
-#### Inject a simple dependency
+#### Inject a simple dependency
 You can inject a dependency to an object thanks to `inject` method:
 ```js
 nead.inject = function(object, propertyName, dependency)
@@ -275,7 +275,7 @@ class Program {
 }
 ```
 
-#### Define a value type dependency
+#### Define a value type dependency
 As you may have noticed in a previous example, it is possible to define a value type giving a validation schema:
 ```js
 class personalGreeter {
@@ -313,7 +313,7 @@ class Program {
 }
 ```
 
-#### Define a "proxified" dependency
+#### Define a "proxified" dependency
 In some cases, the real dependency is not directly on the injected object but in the objects provided by this latter.
 
 ##### Factory proxy
@@ -908,7 +908,7 @@ nead.addServiceDefinitionFactory('myServiceDefinitionFactory', schema, (options)
 });
 ```
 
-### Testing
+### Testing
 #### Unit tests
 Using dependency injection pattern is usually a nice thing for your unit tests (automatic isolation, straightforward validated mocks, ...). Of course, you can use nead to inject your mocks and stubs and easily validate their interfaces:
 ```js
