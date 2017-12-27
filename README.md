@@ -1,5 +1,7 @@
 # nead
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/gnodi/nead.svg)](https://greenkeeper.io/)
+
 **nead** is a powerful but simple tool helping you to enhance [low coupling](https://en.wikipedia.org/wiki/Coupling_(computer_programming)) between your components thanks to [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection).
 
 Earnings this package can bring to your code:
