@@ -1,0 +1,59 @@
+{
+  "name": "nead",
+  "description": "Dependency injector and container.",
+  "version": "0.0.0",
+  "author": "Thomas Prelot <tprelot@gmail.com> (https://github.com/Gnucki)",
+  "contributors": [],
+  "keywords": [
+    "gnodi",
+    "lib",
+    "nead",
+    "fast",
+    "easy",
+    "simple",
+    "light",
+    "dependency",
+    "injection",
+    "injector",
+    "container",
+    "di",
+    "interface",
+    "object",
+    "service",
+    "soa",
+    "dynamic",
+    "check",
+    "compilation",
+    "runtime"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@gnodi/eslint-config": "^0.4.0",
+    "chai": "^4.1.0",
+    "chai-as-promised": "^7.1.1",
+    "coveralls": "^2.11.15",
+    "mocha": "^3.4.2",
+    "nyc": "^11.0.3"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gnodi/nead"
+  },
+  "main": "index",
+  "scripts": {
+    "check": "gnodi-lint && npm run test-coverage && npm run test-integration",
+    "lint": "gnodi-lint",
+    "test": "NODE_ENV='test' mocha --recursive test/unit/ src/",
+    "test-coverage": "nyc npm test && nyc report --reporter text-summary",
+    "test-coveralls": "nyc npm test && nyc report --reporter text-lcov | coveralls",
+    "test-debug": "NODE_ENV='test' mocha --recursive --full-trace --check-leaks test/unit/ src/",
+    "test-integration": "NODE_ENV='test' mocha --recursive test/integration/",
+    "test-watch": "NODE_ENV='test' mocha -w -b --recursive test/unit/ test/integration/ test/fixtures/ index.js"
+  },
+  "bin": {},
+  "engines": {
+    "node": ">=6",
+    "npm": ">=3"
+  }
+}
