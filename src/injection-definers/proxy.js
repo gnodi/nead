@@ -1,1 +1,1 @@
-proxy.js
+'use strict';

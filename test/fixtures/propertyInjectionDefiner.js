@@ -4,13 +4,13 @@ module.exports = {
   schema: {
     type: 'boolean'
   },
-  getTargetProperty: function(propertyName, definition) {
+  getTargetProperty: function getTargetProperty(propertyName, definition) {
     return definition ? `_${propertyName}` : propertyName;
   },
-  getValues: function(values) {
+  getValues: function getValues(values) {
     return values;
   },
-  check: function() {
+  validate: function validate() {
     return true;
   }
 };

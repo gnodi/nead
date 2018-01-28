@@ -21,7 +21,7 @@ Earnings this package can bring to your code:
 - [Use](#use)
   - [Dependency injector](#simple-dependency-injector)
     - [Inject a simple dependency](#inject-a-simple-dependency)
-    - [Check dependency validity](#check-dependency-validity)
+    - [Validate dependencies](#validate-dependencies)
     - [Inject many dependencies all at once](#inject-many-dependencies-all-at-once)
     - [Obfuscate injected property](#obfuscate-injected-property)
     - [Define dependency getters and setters](#define-dependency-getters-and-setters)
@@ -94,7 +94,7 @@ nead.inject(program, 'greeter', greeter);
 program.run() // Display 'Hello world!'.
 ```
 
-#### Check dependency validity
+#### Validate dependencies
 Ok, at this point, some of you wonder what is the benefit of doing that instead of a simple:
 ```js
 const greeter = {
@@ -121,16 +121,14 @@ And they are right!
 For a good injection, you need to check the interface defining the interaction between your 2 objects. And this is where nead can help you! Let's take the previous `program` object definition and upgrade it a little:
 ```js
 const program = {
-  need: function () {
-    return {
-      // Define 'greeter' dependency.
-      greeter: {
-        // Define the interface the dependency must implement.
-        interface: {
-          methods: ['sayHello']
-        }
+  need: {
+    // Define 'greeter' dependency.
+    greeter: {
+      // Define the interface the dependency must implement.
+      interface: {
+        methods: ['sayHello']
       }
-    };
+    }
   },
   run: function () {
     this.greeter.sayHello();
@@ -143,7 +141,7 @@ When defining method need, you implement the interface needed by nead to check t
 nead.inject(program, 'greeter', greeter);
 // Check that 'greeter' dependency is an object implementing a 'sayHello' method
 // (throw an error if it is not the case).
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Hello world!'.
 ```
@@ -158,11 +156,9 @@ const greeter = {
   }
 };
 const personalGreeter = {
-  need: function () {
-    return {
-      name: {
-        value: {type: 'string'}
-      }
+  need:  {
+    name: {
+      value: {type: 'string'}
     }
   },
   sayHello: function () {
@@ -170,14 +166,12 @@ const personalGreeter = {
   }
 };
 const program = {
-  need: function () {
-    return {
-      greeter: {
-        interface: {
-          methods: ['sayHello']
-        }
+  need: {
+    greeter: {
+      interface: {
+        methods: ['sayHello']
       }
-    };
+    }
   },
   run: function () {
     this.greeter.sayHello();
@@ -190,10 +184,12 @@ if (config.name) {
 } else {
   nead.inject(program, 'greeter', greeter);
 }
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Hello world!'.
 ```
+
+> need property can also be a function in case you would like to evaluate an expression at injection time (like the current time for instance).
 
 #### Inject many dependencies all at once
 You can inject many dependencies in one call:
@@ -212,8 +208,8 @@ nead.injectSet(program, {
   anotherDependency: 'foo',
   anotherObjectDependency: dependency
 });
-// Check the dependencies validity
-nead.check(program);
+// Validate the dependencies.
+nead.validate(program);
 ```
 
 You can also inject all dependencies and check in one call using the second argument of `injectSet` method. The following is equivalent to the previous example:
@@ -223,7 +219,7 @@ You can also inject all dependencies and check in one call using the second argu
 
 import dependency from 'dependency';
 
-// Inject and check the dependencies validity
+// Inject and validate the dependencies.
 nead.injectSet(program, {
   greeter,
   anotherDependency: 'foo',
@@ -361,7 +357,7 @@ nead.injectSet(program, {
   personName: 'John Doe',
   greeterFactory: new GreeterFactory()
 });
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Hello John Doe!'.
 ```
@@ -425,7 +421,7 @@ nead.injectSet(program, {
   personProximity: 'friend',
   greeterRegistry: new GreeterRegistry()
 });
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Hi John!'.
 
@@ -435,7 +431,7 @@ nead.injectSet(program, {
   personProximity: 'superior',
   greeterRegistry: new GreeterRegistry()
 });
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Good morning Mister Doe.'.
 ```
@@ -488,7 +484,7 @@ nead.injectSet(program, {
   greeterIndex: 0,
   greeters: []
 });
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Hi Jane!'.
 
@@ -498,7 +494,7 @@ nead.injectSet(program, {
   greeterIndex: 1,
   greeters: []
 });
-nead.check(program);
+nead.validate(program);
 
 program.run(); // Display 'Good morning Mrs. Doe.'.
 ```
@@ -556,7 +552,7 @@ container.create('service', 'program', {
 Creation options:
 - `{*} object`: The service.
 - `{boolean} [singleton=false]`: If set to true, use the given service value as is, otherwise use `new` operator on functions and `Object.create` on objects.
-- `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need function returned keys).
+- `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need property/function returned keys).
 
 > `#greeter` is a reference string to a service that will be resolved at container building.
 > If you want to inject a standard string starting with a `#`, escape it with a double `##`.
@@ -654,7 +650,7 @@ This will create a factory service allowing to instantiate greeter objects and i
 
 Creation options:
 - `{function|Object} object`: The constructor or prototype.
-- `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need function returned keys).
+- `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need property/function returned keys).
 
 Then, you can use your factory like the following:
 ```js
@@ -743,7 +739,7 @@ Creation options:
 - `{Object|Array} items`: An array or object of items with the same options as for [`service` factory](#service-factory). Use `name` attribute for arrays and key for objects in order to build the name of the services.
 - `{*} [object]`: The default service (constructor or prototype for instance).
 - `{boolean} [singleton=false]`: The default singleton value. If set to true, use the given service value as is, otherwise use `new` operator on functions and `Object.create` on objects.
-- `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need function returned keys) that will be injected to all created services.
+- `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need property/function returned keys) that will be injected to all created services.
 - `{string} [registry]`: An optional registry name to create containing the created services.
 - `{string} [list]`: An optional list name to create containing the created services.
 

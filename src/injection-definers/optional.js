@@ -1,1 +1,1 @@
-optional.js
+'use strict';

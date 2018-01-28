@@ -1,1 +1,1 @@
-property.js
+'use strict';

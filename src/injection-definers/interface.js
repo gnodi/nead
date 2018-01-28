@@ -1,1 +1,1 @@
-interface.js
+'use strict';

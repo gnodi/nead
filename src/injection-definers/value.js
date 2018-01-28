@@ -1,1 +1,1 @@
-value.js
+'use strict';
