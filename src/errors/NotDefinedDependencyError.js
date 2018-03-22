@@ -3,7 +3,7 @@
 /**
  * @class errors/NotDefinedDependencyError
  */
-class NotDefinedDependencyError extends Error {
+module.exports = class NotDefinedDependencyError extends Error {
   /**
    * Constructor.
    * @constructs
@@ -12,7 +12,7 @@ class NotDefinedDependencyError extends Error {
    */
   constructor(name, neededDependencies) {
     super(`'${name}' dependency is not defined in the list of needed dependencies ['${neededDependencies.join('\', \'')}']`);
-  }
-}
 
-module.exports = NotDefinedDependencyError;
+    this.name = 'NotDefinedDependencyError';
+  }
+};

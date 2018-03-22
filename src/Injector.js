@@ -1,10 +1,15 @@
 'use strict';
 
+const BadDefinitionError = require('./errors/BadDefinitionError');
+const BadDependencyError = require('./errors/BadDependencyError');
 const MissingDependencyError = require('./errors/MissingDependencyError');
 const NotDefinedDependencyError = require('./errors/NotDefinedDependencyError');
+const UnexpectedError = require('./errors/UnexpectedError');
 
 const validator = Symbol('validator');
 const injectionDefiners = Symbol('injectionDefiners');
+const validationProcessors = Symbol('validationProcessors');
+const definitionValidators = Symbol('definitionValidators');
 
 const getDependenciesDefinitions = Symbol('getDependenciesDefinitions');
 const getTargetProperty = Symbol('getTargetProperty');
@@ -20,6 +25,8 @@ class Injector {
    */
   constructor() {
     this[injectionDefiners] = {};
+    this[validationProcessors] = {};
+    this[definitionValidators] = {};
   }
 
   /**
@@ -43,20 +50,42 @@ class Injector {
    */
   setInjectionDefiner(key, value) {
     if (typeof key !== 'string') {
-      throw new TypeError(`Expected a key string as first argument, got ${typeof value} instead`);
+      throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
     }
     if (
       typeof value !== 'object' ||
       !value.schema ||
-      !value.getTargetProperty ||
-      !value.getValues ||
-      !value.validate
+      !value.getTargetProperty
     ) {
       throw new TypeError(`Expected a definer as second argument, got ${typeof value} instead`);
     }
 
     this[injectionDefiners][key] = value;
+    this[definitionValidators][key] = this[validator].compile(value.schema);
   }
+
+  /**
+   * Set a validation processor.
+   * @param {string} key - The property name.
+   * @param {Object} value - The processor.
+   * @throws {TypeError} On unexpected arguments.
+   */
+  setValidationProcessor(key, value) {
+    if (typeof key !== 'string') {
+      throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
+    }
+    if (
+      typeof value !== 'object' ||
+      !value.schema ||
+      !value.validate
+    ) {
+      throw new TypeError(`Expected a processor as second argument, got ${typeof value} instead`);
+    }
+
+    this[validationProcessors][key] = value;
+    this[definitionValidators][key] = this[validator].compile(value.schema);
+  }
+
 
   /**
    * Inject a dependency.
@@ -107,12 +136,37 @@ class Injector {
         throw new MissingDependencyError(property);
       }
 
-      Object.keys(this[injectionDefiners]).forEach(
-        key => this[injectionDefiners][key].validate(
-          object[propertyName],
-          propertyDefinition[key]
-        ),
+      const validatedPropertyDefinition = Object.keys(this[validationProcessors]).reduce(
+        (map, key) => {
+          try {
+            map[key] = this[definitionValidators][key].validate( // eslint-disable-line no-param-reassign, max-len
+              propertyDefinition[key]
+            );
+          } catch (error) {
+            if (error.expectedType || error.expectedValues) {
+              throw new BadDefinitionError(error);
+            }
+            throw new UnexpectedError(error);
+          }
+
+          return map;
+        },
+        {}
       );
+
+      Object.keys(this[validationProcessors]).forEach((key) => {
+        try {
+          this[validationProcessors][key].validate(
+            object[propertyName],
+            validatedPropertyDefinition[key]
+          );
+        } catch (error) {
+          if (error.expectedType || error.expectedValues) {
+            throw new BadDependencyError(error);
+          }
+          throw new UnexpectedError(error);
+        }
+      });
     });
   }
 
@@ -176,5 +230,7 @@ class Injector {
 
 Injector.validator = validator;
 Injector.injectionDefiners = injectionDefiners;
+Injector.validationProcessors = validationProcessors;
+Injector.definitionValidators = definitionValidators;
 
 module.exports = Injector;

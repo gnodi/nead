@@ -3,7 +3,7 @@
 /**
  * @class errors/MissingDependencyError
  */
-class MissingDependencyError extends Error {
+module.exports = class MissingDependencyError extends Error {
   /**
    * Constructor.
    * @constructs
@@ -11,7 +11,7 @@ class MissingDependencyError extends Error {
    */
   constructor(name) {
     super(`'${name}' dependency has not been injected`);
-  }
-}
 
-module.exports = MissingDependencyError;
+    this.name = 'MissingDependencyError';
+  }
+};
