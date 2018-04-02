@@ -4,13 +4,13 @@ module.exports = {
   schema: {
     type: 'string'
   },
-  validate: function validate(value, propertyDefinition) {
+  validate: function validate(value, definition) {
     if (!value) {
       throw new Error('unexpected');
     }
-    if (typeof value !== propertyDefinition) { // eslint-disable-line valid-typeof
+    if (typeof value !== definition) { // eslint-disable-line valid-typeof
       const error = new TypeError('bad type');
-      error.expectedType = propertyDefinition;
+      error.expectedType = definition;
       throw error;
     }
   }

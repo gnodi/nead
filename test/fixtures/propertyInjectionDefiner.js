@@ -4,7 +4,7 @@ module.exports = {
   schema: {
     type: 'boolean'
   },
-  getTargetProperty: function getTargetProperty(propertyName, definition) {
-    return definition ? `_${propertyName}` : propertyName;
+  getTargetProperty: function getTargetProperty(name, definition) {
+    return definition ? `_${name}` : name;
   }
 };
