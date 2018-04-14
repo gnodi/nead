@@ -4,17 +4,20 @@ module.exports = {
   compile: function compile(schema) {
     return {
       validate: function validate(value) {
-        if (value === 'unexpected') {
-          throw new Error('unexpected');
-        }
+        return Object.keys(value).reduce((map, key) => {
+          if (value[key] === 'unexpected') {
+            throw new Error('unexpected');
+          }
 
-        if (typeof value !== schema.type) { // eslint-disable-line valid-typeof
-          const error = new TypeError('bad type');
-          error.expectedType = schema.type;
-          throw error;
-        }
+          if (typeof value[key] !== schema[key].type) { // eslint-disable-line valid-typeof
+            const error = new TypeError('bad type');
+            error.expectedType = schema[key].type;
+            throw error;
+          }
 
-        return value;
+          map[key] = value[key]; // eslint-disable-line no-param-reassign
+          return map;
+        }, {});
       }
     };
   },

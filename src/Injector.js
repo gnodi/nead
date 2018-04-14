@@ -9,11 +9,13 @@ const UnexpectedError = require('./errors/UnexpectedError');
 const validator = Symbol('validator');
 const injectionDefiners = Symbol('injectionDefiners');
 const validationProcessors = Symbol('validationProcessors');
-const definitionValidators = Symbol('definitionValidators');
+const definitionValidator = Symbol('definitionValidator');
 
 const getDependenciesDefinitions = Symbol('getDependenciesDefinitions');
+const getDependencyDefinition = Symbol('getDependencyDefinition');
 const getTargetProperty = Symbol('getTargetProperty');
 const injectDependencies = Symbol('injectDependencies');
+const compileDefinitionValidator = Symbol('compileDefinitionValidator');
 
 /**
  * @class Injector
@@ -26,7 +28,7 @@ class Injector {
   constructor() {
     this[injectionDefiners] = {};
     this[validationProcessors] = {};
-    this[definitionValidators] = {};
+    this[definitionValidator] = null;
   }
 
   /**
@@ -61,7 +63,7 @@ class Injector {
     }
 
     this[injectionDefiners][key] = value;
-    this[definitionValidators][key] = this[validator].compile(value.schema);
+    this[definitionValidator] = this[compileDefinitionValidator]();
   }
 
   /**
@@ -83,9 +85,8 @@ class Injector {
     }
 
     this[validationProcessors][key] = value;
-    this[definitionValidators][key] = this[validator].compile(value.schema);
+    this[definitionValidator] = this[compileDefinitionValidator]();
   }
-
 
   /**
    * Inject a dependency.
@@ -129,36 +130,18 @@ class Injector {
     }
 
     Object.keys(needed).forEach((property) => {
-      const propertyDefinition = needed[property];
+      const propertyDefinition = this[getDependencyDefinition](object, property);
       const propertyName = this[getTargetProperty](propertyDefinition, property);
 
       if (!(propertyName in object)) {
         throw new MissingDependencyError(property);
       }
 
-      const validatedPropertyDefinition = Object.keys(this[validationProcessors]).reduce(
-        (map, key) => {
-          try {
-            map[key] = this[definitionValidators][key].validate( // eslint-disable-line no-param-reassign, max-len
-              propertyDefinition[key]
-            );
-          } catch (error) {
-            if (error.expectedType || error.expectedValues) {
-              throw new BadDefinitionError(error);
-            }
-            throw new UnexpectedError(error);
-          }
-
-          return map;
-        },
-        {}
-      );
-
       Object.keys(this[validationProcessors]).forEach((key) => {
         try {
           this[validationProcessors][key].validate(
             object[propertyName],
-            validatedPropertyDefinition[key]
+            propertyDefinition[key]
           );
         } catch (error) {
           if (error.expectedType || error.expectedValues) {
@@ -174,7 +157,7 @@ class Injector {
    * Get dependencies definitions of an object.
    * @param {Object} object - The object.
    * @returns {Object|null} The definitions or null if no one is defined.
-   * @private
+   * @protected
    */
   [getDependenciesDefinitions](object) {
     if (!('need' in object)) {
@@ -187,11 +170,45 @@ class Injector {
   }
 
   /**
+   * Get dependency definition of an object property.
+   * @param {Object} object - The object.
+   * @param {string} property - The property name.
+   * @returns {Object|null} The definitions or null if no one is defined.
+   * @throws {NotDefinedDependencyError} On not defined dependency.
+   * @throws {BadDefinitionError} On bad definition.
+   * @throws {UnexpectedError} On unexpected error.
+   * @protected
+   */
+  [getDependencyDefinition](object, property) {
+    try {
+      const needed = this[getDependenciesDefinitions](object);
+
+      if (!needed) {
+        return null;
+      }
+
+      if (needed && !(property in needed)) {
+        throw new NotDefinedDependencyError(property, Object.keys(needed));
+      }
+
+      return this[definitionValidator].validate(needed[property]);
+    } catch (error) {
+      if (error.expectedType || error.expectedValues) {
+        throw new BadDefinitionError(error);
+      }
+      if (error instanceof NotDefinedDependencyError) {
+        throw error;
+      }
+      throw new UnexpectedError(error);
+    }
+  }
+
+  /**
    * Get target property name.
    * @param {Object} propertyDefinition - The property definition.
    * @param {Object} defaultPropertyName - The default propertyName.
    * @returns {string} The property name.
-   * @private
+   * @protected
    */
   [getTargetProperty](propertyDefinition, defaultPropertyName) {
     if (!propertyDefinition) {
@@ -209,28 +226,44 @@ class Injector {
    * @param {Object} object - The object.
    * @param {Object<string,*>} dependencies - The dependencies indexed by property name.
    * @returns {Object} The injected object.
-   * @private
+   * @protected
    */
   [injectDependencies](object, dependencies) {
     return Object.keys(dependencies).reduce((obj, property) => {
-      const needed = this[getDependenciesDefinitions](object);
+      const definition = this[getDependencyDefinition](object, property);
 
-      if (needed && !(property in needed)) {
-        throw new NotDefinedDependencyError(property, Object.keys(object.need));
-      }
-
-      const propertyDefinition = needed && needed[property];
-      const targetProperty = this[getTargetProperty](propertyDefinition, property);
+      const targetProperty = this[getTargetProperty](definition, property);
       obj[targetProperty] = dependencies[property]; // eslint-disable-line no-param-reassign
 
       return obj;
     }, Object.create(object));
+  }
+
+  /**
+   * Compile definition validator.
+   * @returns {Object} The compiled validator.
+   * @protected
+   */
+  [compileDefinitionValidator]() {
+    const injectionSchema = Object.keys(this[injectionDefiners]).reduce((map, key) => {
+      map[key] = this[injectionDefiners][key].schema; // eslint-disable-line no-param-reassign
+      return map;
+    }, {});
+
+    const validationSchema = Object.keys(this[validationProcessors]).reduce((map, key) => {
+      map[key] = this[validationProcessors][key].schema; // eslint-disable-line no-param-reassign
+      return map;
+    }, {});
+
+    return this[validator].compile(Object.assign({}, injectionSchema, validationSchema));
   }
 }
 
 Injector.validator = validator;
 Injector.injectionDefiners = injectionDefiners;
 Injector.validationProcessors = validationProcessors;
-Injector.definitionValidators = definitionValidators;
+Injector.getDependenciesDefinitions = getDependenciesDefinitions;
+Injector.getDependencyDefinition = getDependencyDefinition;
+Injector.compileDefinitionValidator = compileDefinitionValidator;
 
 module.exports = Injector;

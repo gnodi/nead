@@ -17,7 +17,7 @@ class ValidationProcessor {
    * Validate the property value.
    * @param {string} value - The property value.
    * @param {Object} definition - The property definition.
-   * @throws ValidationError On validation failure.
+   * @throws Error On validation failure.
    */
   validate(value, definition) { // eslint-disable-line no-unused-vars
     throw new Error('\'validate\' method must be implemented');

@@ -256,7 +256,7 @@ describe('Injector', () => {
     });
 
     it('should check validation processor input value', () => {
-      const originalObject = {
+      const object = {
         need: {
           foo: {
             type: true
@@ -264,17 +264,13 @@ describe('Injector', () => {
         }
       };
 
-      const injectedObject = injector.inject(
-        originalObject,
-        'foo',
-        'bar'
-      );
+      object.foo = 'bar';
 
-      expect(() => injector.validate(injectedObject)).to.throw(BadDefinitionError, 'Bad need definition (bad type)');
+      expect(() => injector.validate(object)).to.throw(BadDefinitionError, 'Bad need definition (bad type)');
     });
 
     it('should forward unexpected validation processor input value error as unexpected error', () => {
-      const originalObject = {
+      const object = {
         need: {
           foo: {
             type: 'unexpected'
@@ -282,13 +278,9 @@ describe('Injector', () => {
         }
       };
 
-      const injectedObject = injector.inject(
-        originalObject,
-        'foo',
-        'bar'
-      );
+      object.foo = 'bar';
 
-      expect(() => injector.validate(injectedObject)).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
+      expect(() => injector.validate(object)).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
     });
   });
 
