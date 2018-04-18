@@ -3,7 +3,7 @@
 const error = Symbol('error');
 
 /**
- * @class errors/BadDefinitionError
+ * @class BadDefinitionError
  */
 module.exports = class BadDefinitionError extends TypeError {
   /**

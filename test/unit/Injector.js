@@ -1,12 +1,21 @@
 'use strict';
 
+// Force tests execution order.
+require('./errors/BadDefinition');
+require('./errors/BadDependency');
+require('./errors/Dependency');
+require('./errors/MissingDependency');
+require('./errors/NotDefinedDependency');
+require('./errors/Unexpected');
+
 const expect = require('../expect');
 const Injector = require('../../src/Injector');
-const BadDefinitionError = require('../../src/errors/BadDefinitionError');
-const BadDependencyError = require('../../src/errors/BadDependencyError');
-const MissingDependencyError = require('../../src/errors/MissingDependencyError');
-const NotDefinedDependencyError = require('../../src/errors/NotDefinedDependencyError');
-const UnexpectedError = require('../../src/errors/UnexpectedError');
+const BadDefinitionError = require('../../src/errors/BadDefinition');
+const BadDependencyError = require('../../src/errors/BadDependency');
+const DependencyError = require('../../src/errors/Dependency');
+const MissingDependencyError = require('../../src/errors/MissingDependency');
+const NotDefinedDependencyError = require('../../src/errors/NotDefinedDependency');
+const UnexpectedError = require('../../src/errors/Unexpected');
 
 const validator = require('../fixtures/validator');
 const propertyInjectionDefiner = require('../fixtures/propertyInjectionDefiner');
@@ -142,9 +151,9 @@ describe('Injector', () => {
         'dumb',
         4
       )).to.throw(
-        NotDefinedDependencyError,
-        '\'dumb\' dependency is not defined in the list of needed dependencies [\'foo\', \'bar\']'
-      );
+        DependencyError,
+        '[dumb]: Dependency is not defined in the list of needed dependencies [\'foo\', \'bar\']'
+      ).with.property('error').to.be.an.instanceof(NotDefinedDependencyError);
     });
 
     it('should inject not needed dependency without processing injection definers if no needed dependency is defined', () => {
@@ -195,7 +204,10 @@ describe('Injector', () => {
         1
       );
 
-      expect(() => injector.validate(injectedObject)).to.throw(BadDependencyError, 'Bad dependency (bad type)');
+      expect(() => injector.validate(injectedObject)).to.throw(
+        DependencyError,
+        '[foo]: Bad dependency (bad type)'
+      ).with.property('error').to.be.an.instanceof(BadDependencyError);
     });
 
     it('should failed to validate missing injected dependencies', () => {
@@ -208,9 +220,9 @@ describe('Injector', () => {
       };
 
       expect(() => injector.validate(originalObject)).to.throw(
-        MissingDependencyError,
-        '\'foo\' dependency has not been injected'
-      );
+        DependencyError,
+        '[foo]: Dependency has not been injected'
+      ).with.property('error').to.be.an.instanceof(MissingDependencyError);
     });
 
     it('should validate injected depencies when no needed dependencies is defined', () => {
@@ -237,6 +249,24 @@ describe('Injector', () => {
       expect(() => injector.validate(injectedObject)).to.not.throw(Error);
     });
 
+    it('should forward unexpected values retrieving error as unexpected error', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string'
+          }
+        }
+      };
+
+      const injectedObject = injector.inject(
+        originalObject,
+        'foo',
+        'failed'
+      );
+
+      expect(() => injector.validate(injectedObject)).to.throw(UnexpectedError, 'Unexpected error (failed)');
+    });
+
     it('should forward unexpected validation error as unexpected error', () => {
       const originalObject = {
         need: {
@@ -249,7 +279,7 @@ describe('Injector', () => {
       const injectedObject = injector.inject(
         originalObject,
         'foo',
-        null
+        'unexpected'
       );
 
       expect(() => injector.validate(injectedObject)).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
@@ -266,21 +296,10 @@ describe('Injector', () => {
 
       object.foo = 'bar';
 
-      expect(() => injector.validate(object)).to.throw(BadDefinitionError, 'Bad need definition (bad type)');
-    });
-
-    it('should forward unexpected validation processor input value error as unexpected error', () => {
-      const object = {
-        need: {
-          foo: {
-            type: 'unexpected'
-          }
-        }
-      };
-
-      object.foo = 'bar';
-
-      expect(() => injector.validate(object)).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
+      expect(() => injector.validate(object)).to.throw(
+        DependencyError,
+        '[foo]: Bad need definition (bad type)'
+      ).with.property('error').to.be.an.instanceof(BadDefinitionError);
     });
   });
 
@@ -378,9 +397,9 @@ describe('Injector', () => {
           dumb: 4
         }
       )).to.throw(
-        NotDefinedDependencyError,
-        '\'dumb\' dependency is not defined in the list of needed dependencies [\'foo\', \'bar\']'
-      );
+        DependencyError,
+        '[dumb]: Dependency is not defined in the list of needed dependencies [\'foo\', \'bar\']'
+      ).with.property('error').to.be.an.instanceof(NotDefinedDependencyError);
     });
 
     it('should inject not needed dependency without processing injection definers if no needed dependency is defined', () => {
@@ -443,7 +462,10 @@ describe('Injector', () => {
           },
           true
         );
-      }).to.throw(BadDependencyError, 'Bad dependency (bad type)');
+      }).to.throw(
+        DependencyError,
+        '[bar]: Bad dependency (bad type)'
+      ).with.property('error').to.be.an.instanceof(BadDependencyError);
     });
 
     it('should failed to validate missing injected dependencies', () => {
@@ -467,9 +489,9 @@ describe('Injector', () => {
           true
         );
       }).to.throw(
-        MissingDependencyError,
-        '\'bar\' dependency has not been injected'
-      );
+        DependencyError,
+        '[bar]: Dependency has not been injected'
+      ).with.property('error').to.be.an.instanceof(MissingDependencyError);
     });
 
     it('should validate injected depencies when no needed dependencies is defined', () => {
@@ -518,7 +540,30 @@ describe('Injector', () => {
           },
           true
         );
-      }).to.throw(BadDependencyError, 'Bad dependency (bad type)');
+      }).to.throw(
+        DependencyError,
+        '[bar]: Bad dependency (bad type)'
+      ).with.property('error').to.be.an.instanceof(BadDependencyError);
+    });
+
+    it('should forward unexpected values retrieving error as unexpected error', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string'
+          }
+        }
+      };
+
+      expect(() => {
+        injector.injectSet(
+          originalObject,
+          {
+            foo: 'failed'
+          },
+          true
+        );
+      }).to.throw(UnexpectedError, 'Unexpected error (failed)');
     });
 
     it('should forward unexpected validation error as unexpected error', () => {
@@ -534,7 +579,7 @@ describe('Injector', () => {
         injector.injectSet(
           originalObject,
           {
-            foo: null
+            foo: 'unexpected'
           },
           true
         );
@@ -558,14 +603,17 @@ describe('Injector', () => {
           },
           true
         );
-      }).to.throw(BadDefinitionError, 'Bad need definition (bad type)');
+      }).to.throw(
+        DependencyError,
+        '[foo]: Bad need definition (bad type)'
+      ).with.property('error').to.be.an.instanceof(BadDefinitionError);
     });
 
     it('should forward unexpected validation processor input value error as unexpected error', () => {
       const originalObject = {
         need: {
           foo: {
-            type: 'unexpected'
+            type: 'string'
           }
         }
       };
@@ -574,7 +622,7 @@ describe('Injector', () => {
         injector.injectSet(
           originalObject,
           {
-            foo: 'bar'
+            foo: 'unexpected'
           },
           true
         );

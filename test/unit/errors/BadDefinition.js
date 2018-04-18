@@ -1,7 +1,7 @@
 'use strict';
 
 const expect = require('../../expect');
-const BadDefinitionError = require('../../../src/errors/BadDefinitionError');
+const BadDefinitionError = require('../../../src/errors/BadDefinition');
 
 let error;
 const validationError = new Error('foo');

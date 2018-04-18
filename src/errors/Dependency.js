@@ -3,18 +3,19 @@
 const error = Symbol('error');
 
 /**
- * @class errors/BadDependencyError
+ * @class DependencyError
  */
-module.exports = class BadDependencyError extends TypeError {
+module.exports = class DependencyError extends Error {
   /**
    * Constructor.
    * @constructs
+   * @param {string} name - The dependency name.
    * @param {Error} originalError - The original validation error.
    */
-  constructor(originalError) {
-    super(`Bad dependency (${originalError.message})`);
+  constructor(name, originalError) {
+    super(`[${name}]: ${originalError.message}`);
 
-    this.name = 'BadDependencyError';
+    this.name = 'DependencyError';
     this[error] = originalError;
   }
 

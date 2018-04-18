@@ -15,12 +15,12 @@ class OptionalValidationProcessor extends ValidationProcessor {
   }
 
   /** @inheritdoc */
-  validate(value, definition) {
-    if (value === null || value === undefined) {
-      throw Error('...');
+  getValues(values, definition) {
+    const value = values[0];
+    if (!definition && values.length <= 1 && (value === null || value === undefined)) {
+      this[ValidationProcessor.throwMissingDependencyError]();
     }
-
-    return definition || name;
+    return values;
   }
 }
 

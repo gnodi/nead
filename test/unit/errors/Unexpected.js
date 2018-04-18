@@ -1,7 +1,7 @@
 'use strict';
 
 const expect = require('../../expect');
-const UnexpectedError = require('../../../src/errors/UnexpectedError');
+const UnexpectedError = require('../../../src/errors/Unexpected');
 
 let error;
 const unexpectedError = new Error('foo');

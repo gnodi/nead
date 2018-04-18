@@ -1,16 +1,16 @@
 'use strict';
 
 const expect = require('../../expect');
-const BadDependencyError = require('../../../src/errors/BadDependencyError');
+const DependencyError = require('../../../src/errors/Dependency');
 
 let error;
-const validationError = new Error('foo');
+const validationError = new Error('bad dependency');
 
-describe('BadDependencyError', () => {
+describe('DependencyError', () => {
   describe('constructor', () => {
     it('should build an explicit message from arguments', () => {
-      error = new BadDependencyError(validationError);
-      expect(error.message).to.equal('Bad dependency (foo)');
+      error = new DependencyError('foo', validationError);
+      expect(error.message).to.equal('[foo]: bad dependency');
     });
   });
 

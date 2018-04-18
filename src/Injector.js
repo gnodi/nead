@@ -1,10 +1,11 @@
 'use strict';
 
-const BadDefinitionError = require('./errors/BadDefinitionError');
-const BadDependencyError = require('./errors/BadDependencyError');
-const MissingDependencyError = require('./errors/MissingDependencyError');
-const NotDefinedDependencyError = require('./errors/NotDefinedDependencyError');
-const UnexpectedError = require('./errors/UnexpectedError');
+const BadDefinitionError = require('./errors/BadDefinition');
+const BadDependencyError = require('./errors/BadDependency');
+const DependencyError = require('./errors/Dependency');
+const MissingDependencyError = require('./errors/MissingDependency');
+const NotDefinedDependencyError = require('./errors/NotDefinedDependency');
+const UnexpectedError = require('./errors/Unexpected');
 
 const validator = Symbol('validator');
 const injectionDefiners = Symbol('injectionDefiners');
@@ -94,6 +95,8 @@ class Injector {
    * @param {string} property - The property name.
    * @param {*} dependency - The dependency.
    * @returns {*} The injected object.
+   * @throws {DependencyError} On error related to a dependency.
+   * @throws {UnexpectedError} On unexpected error.
    */
   inject(object, property, dependency) {
     return this[injectDependencies](object, {[property]: dependency});
@@ -105,7 +108,8 @@ class Injector {
    * @param {Object<*>} dependencies - The dependencies indexed by property name.
    * @param {boolean} validate - Whether or not to validate dependencies.
    * @returns {*} The injected object.
-   * @throws {Error} On validation failure.
+   * @throws {DependencyError} On error related to a dependency.
+   * @throws {UnexpectedError} On unexpected error.
    */
   injectSet(object, dependencies, validate) {
     const injectedObject = this[injectDependencies](object, dependencies);
@@ -120,7 +124,8 @@ class Injector {
   /**
    * Validate dependencies.
    * @param {Object} object - The object.
-   * @throws {Error} On validation failure.
+   * @throws {DependencyError} On error related to a dependency.
+   * @throws {UnexpectedError} On unexpected error.
    */
   validate(object) {
     const needed = this[getDependenciesDefinitions](object);
@@ -133,19 +138,33 @@ class Injector {
       const propertyDefinition = this[getDependencyDefinition](object, property);
       const propertyName = this[getTargetProperty](propertyDefinition, property);
 
-      if (!(propertyName in object)) {
-        throw new MissingDependencyError(property);
-      }
-
-      Object.keys(this[validationProcessors]).forEach((key) => {
+      // Retrieve dependency values to validate.
+      const values = Object.keys(this[validationProcessors]).reduce((list, key) => {
         try {
-          this[validationProcessors][key].validate(
-            object[propertyName],
+          return this[validationProcessors][key].getValues(
+            list,
             propertyDefinition[key]
           );
         } catch (error) {
-          if (error.expectedType || error.expectedValues) {
-            throw new BadDependencyError(error);
+          if (error instanceof MissingDependencyError) {
+            throw new DependencyError(property, error);
+          }
+          throw new UnexpectedError(error);
+        }
+      }, [object[propertyName]]);
+
+      // Validate dependency values.
+      Object.keys(this[validationProcessors]).forEach((key) => {
+        try {
+          values.forEach((value) => {
+            this[validationProcessors][key].validate(
+              value,
+              propertyDefinition[key]
+            );
+          });
+        } catch (error) {
+          if (error instanceof BadDependencyError) {
+            throw new DependencyError(property, error);
           }
           throw new UnexpectedError(error);
         }
@@ -174,9 +193,7 @@ class Injector {
    * @param {Object} object - The object.
    * @param {string} property - The property name.
    * @returns {Object|null} The definitions or null if no one is defined.
-   * @throws {NotDefinedDependencyError} On not defined dependency.
-   * @throws {BadDefinitionError} On bad definition.
-   * @throws {UnexpectedError} On unexpected error.
+   * @throws {DependencyError} On error related to a dependency.
    * @protected
    */
   [getDependencyDefinition](object, property) {
@@ -188,18 +205,15 @@ class Injector {
       }
 
       if (needed && !(property in needed)) {
-        throw new NotDefinedDependencyError(property, Object.keys(needed));
+        throw new NotDefinedDependencyError(Object.keys(needed));
       }
 
       return this[definitionValidator].validate(needed[property]);
     } catch (error) {
-      if (error.expectedType || error.expectedValues) {
-        throw new BadDefinitionError(error);
-      }
-      if (error instanceof NotDefinedDependencyError) {
-        throw error;
-      }
-      throw new UnexpectedError(error);
+      const forwardedError = error instanceof NotDefinedDependencyError
+        ? error
+        : new BadDefinitionError(error);
+      throw new DependencyError(property, forwardedError);
     }
   }
 

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * @class errors/MissingDependencyError
+ * @class MissingDependencyError
  */
 module.exports = class MissingDependencyError extends Error {
   /**
@@ -9,8 +9,8 @@ module.exports = class MissingDependencyError extends Error {
    * @constructs
    * @param {string} name - The dependency name.
    */
-  constructor(name) {
-    super(`'${name}' dependency has not been injected`);
+  constructor() {
+    super('Dependency has not been injected');
 
     this.name = 'MissingDependencyError';
   }
