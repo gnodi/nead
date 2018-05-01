@@ -2,17 +2,16 @@
 
 const felv = require('felv');
 const Injector = require('./src/Injector');
+const OptionalInjectionDefiner = require('./src/injection-definers/Optional');
 const PropertyInjectionDefiner = require('./src/injection-definers/Property');
-const OptionalValidationProcessor = require('./src/validation-processors/Optional');
 
+const optionalInjectionDefiner = new OptionalInjectionDefiner();
 const propertyInjectionDefiner = new PropertyInjectionDefiner();
-
-const optionalValidationProcessor = new OptionalValidationProcessor();
 
 const injector = new Injector();
 injector.validator = felv;
+injector.setInjectionDefiner('optional', optionalInjectionDefiner);
 injector.setInjectionDefiner('property', propertyInjectionDefiner);
-injector.setValidationProcessor('optional', optionalValidationProcessor);
 
 /**
  * Inject a dependency.

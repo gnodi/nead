@@ -22,4 +22,13 @@ describe('InjectionDefiner', () => {
       expect(propertyName).to.equal('foo');
     });
   });
+
+  describe('"validate" method', () => {
+    it('should throw a missing implementation error', () => {
+      expect(() => injectionDefiner.validate('foo', {})).to.throw(
+        Error,
+        '\'validate\' method must be implemented'
+      );
+    });
+  });
 });

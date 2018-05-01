@@ -19,7 +19,7 @@ const UnexpectedError = require('../../src/errors/Unexpected');
 
 const validator = require('../fixtures/validator');
 const propertyInjectionDefiner = require('../fixtures/propertyInjectionDefiner');
-const typeValidationProcessor = require('../fixtures/typeValidationProcessor');
+const typeInjectionDefiner = require('../fixtures/typeInjectionDefiner');
 
 const injector = new Injector();
 
@@ -37,6 +37,7 @@ describe('Injector', () => {
   describe('"setInjectionDefiner" method', () => {
     it('should set an injection definer', () => {
       injector.setInjectionDefiner('property', propertyInjectionDefiner);
+      injector.setInjectionDefiner('type', typeInjectionDefiner);
     });
 
     it('should only accept a name as first argument', () => {
@@ -48,24 +49,6 @@ describe('Injector', () => {
     it('should only accept an injection definer as second argument', () => {
       expect(
         () => { injector.setInjectionDefiner('property', 'bar'); }
-      ).to.throw(TypeError);
-    });
-  });
-
-  describe('"setValidationProcessor" method', () => {
-    it('should set a validation processor', () => {
-      injector.setValidationProcessor('type', typeValidationProcessor);
-    });
-
-    it('should only accept a name as first argument', () => {
-      expect(
-        () => { injector.setValidationProcessor(1, typeValidationProcessor); }
-      ).to.throw(TypeError);
-    });
-
-    it('should only accept a validation processor as second argument', () => {
-      expect(
-        () => { injector.setValidationProcessor('property', 'bar'); }
       ).to.throw(TypeError);
     });
   });
@@ -285,7 +268,7 @@ describe('Injector', () => {
       expect(() => injector.validate(injectedObject)).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
     });
 
-    it('should check validation processor input value', () => {
+    it('should check injection definer input value', () => {
       const object = {
         need: {
           foo: {
@@ -586,7 +569,7 @@ describe('Injector', () => {
       }).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
     });
 
-    it('should check validation processor input value', () => {
+    it('should check injection definer input value', () => {
       const originalObject = {
         need: {
           foo: {
@@ -609,7 +592,7 @@ describe('Injector', () => {
       ).with.property('error').to.be.an.instanceof(BadDefinitionError);
     });
 
-    it('should forward unexpected validation processor input value error as unexpected error', () => {
+    it('should forward unexpected injection definer input value error as unexpected error', () => {
       const originalObject = {
         need: {
           foo: {

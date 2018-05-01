@@ -1,11 +1,11 @@
 'use strict';
 
-const ValidationProcessor = require('../ValidationProcessor');
+const InjectionDefiner = require('../InjectionDefiner');
 
 /**
- * @class OptionalValidationProcessor
+ * @class OptionalInjectionDefiner
  */
-class OptionalValidationProcessor extends ValidationProcessor {
+class OptionalInjectionDefiner extends InjectionDefiner {
   /** @inheritdoc */
   get schema() {
     return {
@@ -18,10 +18,10 @@ class OptionalValidationProcessor extends ValidationProcessor {
   getValues(values, definition) {
     const value = values[0];
     if (!definition && values.length <= 1 && (value === null || value === undefined)) {
-      this[ValidationProcessor.throwMissingDependencyError]();
+      this[InjectionDefiner.throwMissingDependencyError]();
     }
     return values;
   }
 }
 
-module.exports = OptionalValidationProcessor;
+module.exports = OptionalInjectionDefiner;

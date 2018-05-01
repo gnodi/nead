@@ -6,5 +6,11 @@ module.exports = {
   },
   getTargetProperty: function getTargetProperty(name, definition) {
     return definition ? `_${name}` : name;
+  },
+  getValues: function getValues(values) {
+    return values;
+  },
+  validate: function validate(value) {
+    return value;
   }
 };

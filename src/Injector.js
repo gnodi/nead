@@ -9,7 +9,6 @@ const UnexpectedError = require('./errors/Unexpected');
 
 const validator = Symbol('validator');
 const injectionDefiners = Symbol('injectionDefiners');
-const validationProcessors = Symbol('validationProcessors');
 const definitionValidator = Symbol('definitionValidator');
 
 const getDependenciesDefinitions = Symbol('getDependenciesDefinitions');
@@ -28,7 +27,6 @@ class Injector {
    */
   constructor() {
     this[injectionDefiners] = {};
-    this[validationProcessors] = {};
     this[definitionValidator] = null;
   }
 
@@ -58,34 +56,13 @@ class Injector {
     if (
       typeof value !== 'object' ||
       !value.schema ||
-      !value.getTargetProperty
+      !value.getTargetProperty ||
+      !value.validate
     ) {
       throw new TypeError(`Expected a definer as second argument, got ${typeof value} instead`);
     }
 
     this[injectionDefiners][key] = value;
-    this[definitionValidator] = this[compileDefinitionValidator]();
-  }
-
-  /**
-   * Set a validation processor.
-   * @param {string} key - The property name.
-   * @param {Object} value - The processor.
-   * @throws {TypeError} On unexpected arguments.
-   */
-  setValidationProcessor(key, value) {
-    if (typeof key !== 'string') {
-      throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
-    }
-    if (
-      typeof value !== 'object' ||
-      !value.schema ||
-      !value.validate
-    ) {
-      throw new TypeError(`Expected a processor as second argument, got ${typeof value} instead`);
-    }
-
-    this[validationProcessors][key] = value;
     this[definitionValidator] = this[compileDefinitionValidator]();
   }
 
@@ -139,9 +116,9 @@ class Injector {
       const propertyName = this[getTargetProperty](propertyDefinition, property);
 
       // Retrieve dependency values to validate.
-      const values = Object.keys(this[validationProcessors]).reduce((list, key) => {
+      const values = Object.keys(this[injectionDefiners]).reduce((list, key) => {
         try {
-          return this[validationProcessors][key].getValues(
+          return this[injectionDefiners][key].getValues(
             list,
             propertyDefinition[key]
           );
@@ -154,10 +131,10 @@ class Injector {
       }, [object[propertyName]]);
 
       // Validate dependency values.
-      Object.keys(this[validationProcessors]).forEach((key) => {
+      Object.keys(this[injectionDefiners]).forEach((key) => {
         try {
           values.forEach((value) => {
-            this[validationProcessors][key].validate(
+            this[injectionDefiners][key].validate(
               value,
               propertyDefinition[key]
             );
@@ -259,23 +236,17 @@ class Injector {
    * @protected
    */
   [compileDefinitionValidator]() {
-    const injectionSchema = Object.keys(this[injectionDefiners]).reduce((map, key) => {
+    const schema = Object.keys(this[injectionDefiners]).reduce((map, key) => {
       map[key] = this[injectionDefiners][key].schema; // eslint-disable-line no-param-reassign
       return map;
     }, {});
 
-    const validationSchema = Object.keys(this[validationProcessors]).reduce((map, key) => {
-      map[key] = this[validationProcessors][key].schema; // eslint-disable-line no-param-reassign
-      return map;
-    }, {});
-
-    return this[validator].compile(Object.assign({}, injectionSchema, validationSchema));
+    return this[validator].compile(schema);
   }
 }
 
 Injector.validator = validator;
 Injector.injectionDefiners = injectionDefiners;
-Injector.validationProcessors = validationProcessors;
 Injector.getDependenciesDefinitions = getDependenciesDefinitions;
 Injector.getDependencyDefinition = getDependencyDefinition;
 Injector.compileDefinitionValidator = compileDefinitionValidator;

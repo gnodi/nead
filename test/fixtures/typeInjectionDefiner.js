@@ -7,6 +7,9 @@ module.exports = {
   schema: {
     type: 'string'
   },
+  getTargetProperty: function getTargetProperty(name) {
+    return name;
+  },
   getValues: function getValues(values) {
     if (values[0] === 'failed') {
       throw new Error('failed');
