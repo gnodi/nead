@@ -28,8 +28,8 @@ class ProxyInjectionDefiner extends InjectionDefiner {
       throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
     }
     if (
-      typeof value !== 'object' ||
-      !value.getValues
+      typeof value !== 'object'
+      || !value.getValues
     ) {
       throw new TypeError(`Expected a proxy injector as second argument, got ${typeof value} instead`);
     }

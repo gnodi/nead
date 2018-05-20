@@ -54,10 +54,10 @@ class Injector {
       throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
     }
     if (
-      typeof value !== 'object' ||
-      !value.schema ||
-      !value.getTargetProperty ||
-      !value.validate
+      typeof value !== 'object'
+      || !value.schema
+      || !value.getTargetProperty
+      || !value.validate
     ) {
       throw new TypeError(`Expected a definer as second argument, got ${typeof value} instead`);
     }
