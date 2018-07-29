@@ -1,5 +1,7 @@
 'use strict';
 
+const MissingItemError = require('./errors/MissingItem');
+
 const type = Symbol('type');
 const items = Symbol('items');
 
@@ -33,16 +35,24 @@ class Registry {
    */
   get(key) {
     if (!(key in this[items])) {
-      throw new Error(`No ${this[type]} found for '${key}' key`);
+      throw new MissingItemError(this[type], key);
     }
     return this[items][key];
+  }
+
+  /**
+   * Get item map.
+   * @returns {Object<string,*>} The item map.
+   */
+  getMap() {
+    return Object.assign({}, this[items]);
   }
 
   /**
    * Get item list.
    * @returns {Array<*>} The item list.
    */
-  getAll() {
+  getList() {
     return Object.keys(this[items]).map(key => this[items][key]);
   }
 }
