@@ -1,5 +1,7 @@
 'use strict';
 
+const MissingImplementationError = require('./errors/MissingImplementation');
+
 /**
  * @class DefinitionFactory
  * @abstract
@@ -20,7 +22,7 @@ class DefinitionFactory {
    * @returns {Array<Object>} The definitions.
    */
   create(key, options) { // eslint-disable-line no-unused-vars
-    throw new Error('\'create\' method must be implemented');
+    throw new MissingImplementationError(this, 'create');
   }
 }
 

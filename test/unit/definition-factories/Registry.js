@@ -2,11 +2,25 @@
 
 const expect = require('../../expect');
 const RegistryDefinitionFactory = require('../../../src/definition-factories/Registry');
+const BadTypeError = require('../../../src/errors/BadType');
+
+const functionSerializer = require('../../fixtures/functionSerializer');
 
 const definitionFactory = new RegistryDefinitionFactory();
-const registryObject = {get: true};
+const registryObject = {
+  get: true,
+  set: true,
+  getList: true,
+  getMap: true
+};
 class Registry {
-  get() {}
+  constructor() {
+    this.items = {};
+  }
+  get(key) { return this.items[key]; }
+  set(key, value) { this.items[key] = value; }
+  getList() {}
+  getMap() {}
 }
 class Random {
 }
@@ -22,8 +36,8 @@ describe('RegistryDefinitionFactory', () => {
     });
 
     it('should only accept a registry class or object', () => {
-      expect(() => { definitionFactory.registryObject = Random; }).to.throw(TypeError);
-      expect(() => { definitionFactory.registryObject = 'foo'; }).to.throw(TypeError);
+      expect(() => { definitionFactory.registryObject = Random; }).to.throw(BadTypeError);
+      expect(() => { definitionFactory.registryObject = 'foo'; }).to.throw(BadTypeError);
     });
   });
 
@@ -38,11 +52,12 @@ describe('RegistryDefinitionFactory', () => {
       const definitions = definitionFactory.create('items', {
         items: {
           foo: {plop: 1},
-          bar: {plip: 2}
+          bar: {plip: 2},
+          foobar: '#plap'
         }
       });
 
-      expect(definitions).to.deep.equal([
+      expect(functionSerializer.serialize(definitions)).to.deep.equal([
         {
           key: 'items.foo',
           object: {plop: 1}
@@ -52,16 +67,33 @@ describe('RegistryDefinitionFactory', () => {
           object: {plip: 2}
         },
         {
+          key: 'items.foobar',
+          object: '#plap'
+        },
+        {
           key: 'items',
-          object: {get: true},
+          object: {
+            get: true,
+            set: true,
+            getList: true,
+            getMap: true
+          },
           dependencies: {
             items: {
-              foo: '#items.foo',
-              bar: '#items.bar'
+              injectedValue: {
+                foo: '#items.foo',
+                bar: '#items.bar',
+                foobar: '#items.foobar'
+              },
+              injectDependency: 'function'
             }
           }
         }
       ]);
+      const injectedValue = definitions[3].dependencies.items.injectedValue;
+      const injectedRegistry = new Registry();
+      definitions[3].dependencies.items.injectDependency(injectedRegistry, injectedValue);
+      expect(injectedRegistry.get('bar')).to.deep.equal('#items.bar');
     });
   });
 });

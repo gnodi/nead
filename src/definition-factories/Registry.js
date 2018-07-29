@@ -1,6 +1,7 @@
 'use strict';
 
 const DefinitionFactory = require('../DefinitionFactory');
+const BadTypeError = require('../errors/BadType');
 
 const registryObject = Symbol('registryObject');
 
@@ -18,8 +19,11 @@ class RegistryDefinitionFactory extends DefinitionFactory {
       !value
       || !['function', 'object'].includes(typeof value)
       || (!value.get && !value.prototype.get)
+      || (!value.set && !value.prototype.set)
+      || (!value.getList && !value.prototype.getList)
+      || (!value.getMap && !value.prototype.getMap)
     ) {
-      throw new TypeError(`Expected a registry object/class, got ${typeof value} instead`);
+      throw new BadTypeError(value, 'a registry object/class');
     }
 
     this[registryObject] = value;
@@ -38,24 +42,29 @@ class RegistryDefinitionFactory extends DefinitionFactory {
   create(key, options) {
     const itemKeys = Object.keys(options.items);
     // Create definitions of items.
-    const items = itemKeys.map(itemKey => ({
+    const definitions = itemKeys.map(itemKey => ({
       key: `${key}.${itemKey}`,
       object: options.items[itemKey]
     }));
 
     // Create definition of registry.
-    items.push({
+    definitions.push({
       key,
       object: this[registryObject],
       dependencies: {
-        items: itemKeys.reduce((map, itemKey) => Object.assign(
-          map,
-          {[itemKey]: `#${key}.${itemKey}`}
-        ), {})
+        items: {
+          injectedValue: itemKeys.reduce((map, itemKey) => Object.assign(
+            map,
+            {[itemKey]: `#${key}.${itemKey}`}
+          ), {}),
+          injectDependency: (registry, items) => {
+            Object.keys(items).forEach(itemKey => registry.set(itemKey, items[itemKey]));
+          }
+        }
       }
     });
 
-    return items;
+    return definitions;
   }
 }
 
