@@ -2,9 +2,9 @@
 
 module.exports = {
   getValues: function getValues(proxy) {
-    return [`..${proxy}`, `...${proxy}`];
+    return proxy;
   },
   getPrototype: function getPrototype() {
-    return [];
+    return null;
   }
 };

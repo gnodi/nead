@@ -12,5 +12,8 @@ module.exports = {
   },
   validate: function validate(value) {
     return value;
+  },
+  getValidatedDependency(value) {
+    return value;
   }
 };

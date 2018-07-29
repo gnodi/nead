@@ -27,5 +27,12 @@ module.exports = {
       const error = new BadDependencyError(new Error('bad type'));
       throw error;
     }
+    return value;
+  },
+  getValidatedDependency(value) {
+    if (value === 'unexpected value') {
+      throw new Error('unexpected value');
+    }
+    return value;
   }
 };
