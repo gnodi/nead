@@ -2,6 +2,7 @@
 
 const BadDefinitionError = require('./errors/BadDefinition');
 const BadDependencyError = require('./errors/BadDependency');
+const BadTypeError = require('./errors/BadType');
 const DependencyError = require('./errors/Dependency');
 const MissingDependencyError = require('./errors/MissingDependency');
 const NotDefinedDependencyError = require('./errors/NotDefinedDependency');
@@ -16,6 +17,8 @@ const getDependencyDefinition = Symbol('getDependencyDefinition');
 const getTargetProperty = Symbol('getTargetProperty');
 const injectDependencies = Symbol('injectDependencies');
 const compileDefinitionValidator = Symbol('compileDefinitionValidator');
+const getDefinerKeys = Symbol('getDefinerKeys');
+const handleValidationError = Symbol('handleValidationError');
 
 /**
  * @class Injector
@@ -37,7 +40,7 @@ class Injector {
    */
   set validator(value) {
     if (typeof value !== 'object' || !value.compile || !value.validate) {
-      throw new TypeError(`Expected a validator, got ${typeof value} instead`);
+      throw new BadTypeError(value, 'a validator');
     }
 
     this[validator] = value;
@@ -51,15 +54,16 @@ class Injector {
    */
   setInjectionDefiner(key, value) {
     if (typeof key !== 'string') {
-      throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
+      throw new BadTypeError(value, 'a string key as first argument');
     }
     if (
       typeof value !== 'object'
       || !value.schema
       || !value.getTargetProperty
       || !value.validate
+      || !value.getValidatedDependency
     ) {
-      throw new TypeError(`Expected a definer as second argument, got ${typeof value} instead`);
+      throw new BadTypeError(value, 'a definer as second argument');
     }
 
     this[injectionDefiners][key] = value;
@@ -84,23 +88,22 @@ class Injector {
    * @param {Object} object - The object.
    * @param {Object<*>} dependencies - The dependencies indexed by property name.
    * @param {boolean} validate - Whether or not to validate dependencies.
-   * @returns {*} The injected object.
+   * @returns {object} The injected object.
    * @throws {DependencyError} On error related to a dependency.
    * @throws {UnexpectedError} On unexpected error.
    */
   injectSet(object, dependencies, validate) {
     const injectedObject = this[injectDependencies](object, dependencies);
 
-    if (validate) {
-      this.validate(injectedObject);
-    }
-
-    return injectedObject;
+    return validate
+      ? this.validate(injectedObject)
+      : injectedObject;
   }
 
   /**
    * Validate dependencies.
    * @param {Object} object - The object.
+   * @returns {object} The validated object.
    * @throws {DependencyError} On error related to a dependency.
    * @throws {UnexpectedError} On unexpected error.
    */
@@ -108,45 +111,66 @@ class Injector {
     const needed = this[getDependenciesDefinitions](object);
 
     if (!needed) {
-      return;
+      return object;
     }
 
-    Object.keys(needed).forEach((property) => {
+    const validatedDependencies = Object.keys(needed).reduce((dependencies, property) => {
       const propertyDefinition = this[getDependencyDefinition](object, property);
       const propertyName = this[getTargetProperty](propertyDefinition, property);
+      const definerKeys = this[getDefinerKeys](propertyDefinition);
+      const propertyValue = object[propertyName];
 
       // Retrieve dependency values to validate.
-      const values = Object.keys(this[injectionDefiners]).reduce((list, key) => {
+      const values = definerKeys.reduce((list, key) => {
         try {
           return this[injectionDefiners][key].getValues(
             list,
             propertyDefinition[key]
           );
         } catch (error) {
-          if (error instanceof MissingDependencyError) {
-            throw new DependencyError(property, error);
-          }
-          throw new UnexpectedError(error);
+          return this[handleValidationError](error, property);
         }
-      }, [object[propertyName]]);
+      }, [propertyValue]);
 
       // Validate dependency values.
-      Object.keys(this[injectionDefiners]).forEach((key) => {
+      const validatedValues = values.map((value) => {
         try {
-          values.forEach((value) => {
+          const validatedValue = definerKeys.reduce((val, key) => (
             this[injectionDefiners][key].validate(
-              value,
+              val,
               propertyDefinition[key]
-            );
-          });
-        } catch (error) {
-          if (error instanceof BadDependencyError) {
-            throw new DependencyError(property, error);
+            )
+          ), value && value.isWrappedValue ? value.value : value);
+
+          if (value && value.isWrappedValue) {
+            value.value = validatedValue; // eslint-disable-line no-param-reassign
+            return value;
           }
-          throw new UnexpectedError(error);
+
+          return validatedValue;
+        } catch (error) {
+          return this[handleValidationError](error, property);
         }
       });
-    });
+
+      // Impact validated values in dependencies.
+      // eslint-disable-next-line no-param-reassign
+      dependencies[property] = definerKeys.reduce((value, key) => {
+        try {
+          return this[injectionDefiners][key].getValidatedDependency(
+            value,
+            validatedValues,
+            propertyDefinition[key]
+          );
+        } catch (error) {
+          return this[handleValidationError](error, property);
+        }
+      }, propertyValue);
+
+      return dependencies;
+    }, {});
+
+    return this[injectDependencies](object, validatedDependencies);
   }
 
   /**
@@ -206,8 +230,11 @@ class Injector {
       return defaultPropertyName;
     }
 
-    return Object.keys(this[injectionDefiners]).reduce(
-      (value, key) => this[injectionDefiners][key].getTargetProperty(value, propertyDefinition),
+    return this[getDefinerKeys](propertyDefinition).reduce(
+      (value, key) => this[injectionDefiners][key].getTargetProperty(
+        value,
+        propertyDefinition[key]
+      ),
       defaultPropertyName
     );
   }
@@ -220,14 +247,28 @@ class Injector {
    * @protected
    */
   [injectDependencies](object, dependencies) {
+    const injectedObject = Array.isArray(object)
+      ? Array.prototype.concat(object)
+      : Object.create(object);
+
     return Object.keys(dependencies).reduce((obj, property) => {
       const definition = this[getDependencyDefinition](object, property);
 
       const targetProperty = this[getTargetProperty](definition, property);
-      obj[targetProperty] = dependencies[property]; // eslint-disable-line no-param-reassign
+      const dependency = dependencies[property];
+      const hasAccessor = dependency
+        && typeof dependency === 'object'
+        && dependency.injectedValue !== undefined
+        && dependency.injectDependency;
+
+      if (hasAccessor) {
+        dependency.injectDependency(obj, dependency.injectedValue);
+      } else {
+        obj[targetProperty] = dependencies[property]; // eslint-disable-line no-param-reassign
+      }
 
       return obj;
-    }, Object.create(object));
+    }, injectedObject);
   }
 
   /**
@@ -242,6 +283,34 @@ class Injector {
     }, {});
 
     return this[validator].compile(schema);
+  }
+
+  /**
+   * Get definition keys from a property definition.
+   * @param {Object} propertyDefinition - The property definition.
+   * @returns {Array<string>} The keys.
+   * @private
+   */
+  [getDefinerKeys](propertyDefinition) {
+    return Object.keys(this[injectionDefiners]).filter(key => key in propertyDefinition);
+  }
+
+  /**
+   * Handle a validation error.
+   * @param {Error} propertyDefinition - The property definition.
+   * @param {string} propertyName - The property name.
+   * @throws {DependencyError} On validation error.
+   * @throws {UnexpectedError} On unexpected error.
+   * @private
+   */
+  [handleValidationError](error, propertyName) {
+    if (
+      error instanceof MissingDependencyError
+      || error instanceof BadDependencyError
+    ) {
+      throw new DependencyError(propertyName, error);
+    }
+    throw new UnexpectedError(error);
   }
 }
 

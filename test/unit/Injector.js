@@ -3,6 +3,7 @@
 // Force tests execution order.
 require('./errors/BadDefinition');
 require('./errors/BadDependency');
+require('./errors/BadType');
 require('./errors/Dependency');
 require('./errors/MissingDependency');
 require('./errors/NotDefinedDependency');
@@ -12,13 +13,16 @@ const expect = require('../expect');
 const Injector = require('../../src/Injector');
 const BadDefinitionError = require('../../src/errors/BadDefinition');
 const BadDependencyError = require('../../src/errors/BadDependency');
+const BadTypeError = require('../../src/errors/BadType');
 const DependencyError = require('../../src/errors/Dependency');
 const MissingDependencyError = require('../../src/errors/MissingDependency');
 const NotDefinedDependencyError = require('../../src/errors/NotDefinedDependency');
 const UnexpectedError = require('../../src/errors/Unexpected');
 
 const validator = require('../fixtures/validator');
+const defaultInjectionDefiner = require('../fixtures/defaultInjectionDefiner');
 const propertyInjectionDefiner = require('../fixtures/propertyInjectionDefiner');
+const proxyInjectionDefiner = require('../fixtures/proxyInjectionDefiner');
 const typeInjectionDefiner = require('../fixtures/typeInjectionDefiner');
 
 const injector = new Injector();
@@ -30,26 +34,28 @@ describe('Injector', () => {
     });
 
     it('should only accept a validator', () => {
-      expect(() => { injector.validator = 'foo'; }).to.throw(TypeError);
+      expect(() => { injector.validator = 'foo'; }).to.throw(BadTypeError);
     });
   });
 
   describe('"setInjectionDefiner" method', () => {
     it('should set an injection definer', () => {
+      injector.setInjectionDefiner('default', defaultInjectionDefiner);
       injector.setInjectionDefiner('property', propertyInjectionDefiner);
+      injector.setInjectionDefiner('proxy', proxyInjectionDefiner);
       injector.setInjectionDefiner('type', typeInjectionDefiner);
     });
 
     it('should only accept a name as first argument', () => {
       expect(
         () => { injector.setInjectionDefiner(1, propertyInjectionDefiner); }
-      ).to.throw(TypeError);
+      ).to.throw(BadTypeError);
     });
 
     it('should only accept an injection definer as second argument', () => {
       expect(
         () => { injector.setInjectionDefiner('property', 'bar'); }
-      ).to.throw(TypeError);
+      ).to.throw(BadTypeError);
     });
   });
 
@@ -151,6 +157,24 @@ describe('Injector', () => {
       expect(originalObject.foo).to.equal(undefined);
       expect(injectedObject.foo).to.equal('bar');
     });
+
+    it('should handle property accessor', () => {
+      const originalObject = ['plop'];
+
+      const injectedObject = injector.inject(
+        originalObject,
+        'items',
+        {
+          injectedValue: ['plip', 'plup'],
+          injectDependency: (object, value) => {
+            value.forEach(item => object.push(item));
+          }
+        }
+      );
+
+      expect(injectedObject).to.deep.equal(['plop', 'plip', 'plup']);
+      expect(originalObject).to.deep.equal(['plop']);
+    });
   });
 
   describe('"validate" method', () => {
@@ -169,7 +193,9 @@ describe('Injector', () => {
         'bar'
       );
 
-      expect(() => injector.validate(injectedObject)).to.not.throw(Error);
+      const validatedObject = injector.validate(injectedObject);
+
+      expect(validatedObject.foo).to.equal('bar');
     });
 
     it('should failed to validate bad injected dependencies', () => {
@@ -189,7 +215,7 @@ describe('Injector', () => {
 
       expect(() => injector.validate(injectedObject)).to.throw(
         DependencyError,
-        '[foo]: Bad dependency (bad type)'
+        '[foo]: Bad dependency: bad type'
       ).with.property('error').to.be.an.instanceof(BadDependencyError);
     });
 
@@ -209,7 +235,9 @@ describe('Injector', () => {
     });
 
     it('should validate injected depencies when no needed dependencies is defined', () => {
-      expect(() => injector.validate({})).to.not.throw(Error);
+      const validatedValue = injector.validate({foo: 'bar'});
+
+      expect(validatedValue.foo).to.equal('bar');
     });
 
     it('should handle needed dependencies definition function', () => {
@@ -229,7 +257,9 @@ describe('Injector', () => {
         'bar'
       );
 
-      expect(() => injector.validate(injectedObject)).to.not.throw(Error);
+      const validatedValue = injector.validate(injectedObject);
+
+      expect(validatedValue.foo).to.equal('bar');
     });
 
     it('should forward unexpected values retrieving error as unexpected error', () => {
@@ -281,8 +311,62 @@ describe('Injector', () => {
 
       expect(() => injector.validate(object)).to.throw(
         DependencyError,
-        '[foo]: Bad need definition (bad type)'
+        '[foo]: Bad need definition: bad type'
       ).with.property('error').to.be.an.instanceof(BadDefinitionError);
+    });
+
+    it('should replace injected dependency with validated ones', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string',
+            default: 'bar'
+          }
+        }
+      };
+
+      originalObject.foo = '';
+
+      const validatedObject = injector.validate(originalObject);
+
+      expect(validatedObject.foo).to.equal('bar');
+    });
+
+    it('should respect immutability', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string',
+            default: 'bar'
+          }
+        }
+      };
+
+      originalObject.foo = '';
+
+      const validatedObject = injector.validate(originalObject);
+
+      expect(validatedObject).to.not.equal(originalObject);
+      expect(validatedObject.foo).to.equal('bar');
+      expect(originalObject.foo).to.equal('');
+    });
+
+    it('should handle proxified values', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string',
+            default: 'bar',
+            proxy: true
+          }
+        }
+      };
+
+      originalObject.foo = '';
+
+      const validatedObject = injector.validate(originalObject);
+
+      expect(validatedObject.foo).to.equal('bar');
     });
   });
 
@@ -336,10 +420,12 @@ describe('Injector', () => {
         }
       );
 
-      expect(originalObject.foo).to.equal(undefined);
+      expect(originalObject._foo).to.equal(undefined); // eslint-disable-line no-underscore-dangle
       expect(injectedObject._foo).to.equal('bar'); // eslint-disable-line no-underscore-dangle
+      expect(injectedObject.foo).to.equal(undefined);
       expect(originalObject.bar).to.equal(undefined);
-      expect(injectedObject._bar).to.equal(2); // eslint-disable-line no-underscore-dangle
+      expect(injectedObject._bar).to.equal(undefined); // eslint-disable-line no-underscore-dangle
+      expect(injectedObject.bar).to.equal(2); // eslint-disable-line no-underscore-dangle
     });
 
     it('should handle needed dependencies definition function', () => {
@@ -412,16 +498,17 @@ describe('Injector', () => {
         }
       };
 
-      expect(() => {
-        injector.injectSet(
-          originalObject,
-          {
-            foo: 'bar',
-            bar: 2
-          },
-          true
-        );
-      }).to.not.throw(Error);
+      const validatedValue = injector.injectSet(
+        originalObject,
+        {
+          foo: 'bar',
+          bar: 2
+        },
+        true
+      );
+
+      expect(validatedValue.foo).to.equal('bar');
+      expect(validatedValue.bar).to.equal(2);
     });
 
     it('should failed to validate bad injected dependencies', () => {
@@ -447,7 +534,7 @@ describe('Injector', () => {
         );
       }).to.throw(
         DependencyError,
-        '[bar]: Bad dependency (bad type)'
+        '[bar]: Bad dependency: bad type'
       ).with.property('error').to.be.an.instanceof(BadDependencyError);
     });
 
@@ -478,15 +565,16 @@ describe('Injector', () => {
     });
 
     it('should validate injected depencies when no needed dependencies is defined', () => {
-      expect(() => {
-        injector.injectSet(
-          {},
-          {
-            foo: 'bar'
-          },
-          true
-        );
-      }).to.not.throw(Error);
+      const validatedValue = injector.injectSet(
+        {},
+        {
+          foo: 'bar'
+        },
+        true
+      );
+
+
+      expect(validatedValue.foo).to.equal('bar');
     });
 
     it('should handle needed dependencies definition function', () => {
@@ -503,16 +591,17 @@ describe('Injector', () => {
         }
       };
 
-      expect(() => {
-        injector.injectSet(
-          originalObject,
-          {
-            foo: 'bar',
-            bar: 2
-          },
-          true
-        );
-      }).to.not.throw(Error);
+      const validatedValue = injector.injectSet(
+        originalObject,
+        {
+          foo: 'bar',
+          bar: 2
+        },
+        true
+      );
+
+      expect(validatedValue.foo).to.equal('bar');
+      expect(validatedValue.bar).to.equal(2);
 
       expect(() => {
         injector.injectSet(
@@ -525,7 +614,7 @@ describe('Injector', () => {
         );
       }).to.throw(
         DependencyError,
-        '[bar]: Bad dependency (bad type)'
+        '[bar]: Bad dependency: bad type'
       ).with.property('error').to.be.an.instanceof(BadDependencyError);
     });
 
@@ -588,7 +677,7 @@ describe('Injector', () => {
         );
       }).to.throw(
         DependencyError,
-        '[foo]: Bad need definition (bad type)'
+        '[foo]: Bad need definition: bad type'
       ).with.property('error').to.be.an.instanceof(BadDefinitionError);
     });
 
@@ -610,6 +699,63 @@ describe('Injector', () => {
           true
         );
       }).to.throw(UnexpectedError, 'Unexpected error (unexpected)');
+    });
+
+    it('should forward unexpected injection definer validated value retrieving error as unexpected error', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string'
+          }
+        }
+      };
+
+      expect(() => {
+        injector.injectSet(
+          originalObject,
+          {
+            foo: 'unexpected value'
+          },
+          true
+        );
+      }).to.throw(UnexpectedError, 'Unexpected error (unexpected value)');
+    });
+
+    it('should replace injected dependency with validated ones', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string',
+            default: 'bar'
+          }
+        }
+      };
+
+      const validatedObject = injector.injectSet(originalObject, {foo: ''}, true);
+
+      expect(validatedObject.foo).to.equal('bar');
+    });
+
+    it('should respect immutability', () => {
+      const originalObject = {
+        need: {
+          foo: {
+            type: 'string',
+            default: 'bar'
+          }
+        }
+      };
+
+      const injectedObject = injector.injectSet(originalObject, {foo: ''});
+
+      expect(injectedObject).to.not.equal(originalObject);
+
+      const validatedObject = injector.injectSet(originalObject, {foo: ''}, true);
+
+      expect(validatedObject).to.not.equal(originalObject);
+      expect(validatedObject.foo).to.equal('bar');
+      expect(injectedObject.foo).to.equal('');
+      expect(originalObject.foo).to.equal(undefined);
     });
   });
 });
