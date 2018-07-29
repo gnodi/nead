@@ -19,7 +19,7 @@ Earnings this package can bring to your code:
 ## Summary
 - [Installation](#installation)
 - [Use](#use)
-  - [Dependency injector](#simple-dependency-injector)
+  - [Dependency injector](#dependency-injector)
     - [Inject a simple dependency](#inject-a-simple-dependency)
     - [Validate dependencies](#validate-dependencies)
     - [Inject many dependencies all at once](#inject-many-dependencies-all-at-once)
@@ -31,6 +31,7 @@ Earnings this package can bring to your code:
       - [Factory](#factory-proxy)
       - [Registry](#registry-proxy)
       - [List](#list-proxy)
+    - [Inject a dependency with an accessor](#inject-a-dependency-with-an-accessor)
   - [Dependency injection container](#dependency-injection-container)
     - [Instantiate a container](#instantiate-a-container)
     - [Use factories to create service definitions](#use-factories-to-create-service-definitions)
@@ -498,6 +499,29 @@ nead.validate(program);
 
 program.run(); // Display 'Good morning Mrs. Doe.'.
 ```
+
+#### Inject a dependency with an accessor
+In some rare cases (external lib service, specific object, ...), you may need to use an accessor to inject a dependency.
+In that kind of situation, you can use a (`{injectedValue, injectDependency}`) wrapper around your injected dependency:
+```js
+const originalObject = ['plop'];
+
+const injectedObject = injector.inject(
+  originalObject,
+  'items',
+  {
+    injectedValue: ['plip', 'plup'],
+    injectDependency: (object, value) => {
+      value.forEach(item => object.push(item));
+    }
+  }
+);
+
+console.log(injectedObject); // ['plop', 'plip', 'plup']
+console.log(originalObject); // ['plop']
+```
+
+> Use it with caution because it becomes easier to break immutability.
 
 ### Dependency injection container
 Of course, this is a nice thing to inject dependencies like that but it can be a little tedious to:
