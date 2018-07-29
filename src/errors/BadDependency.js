@@ -9,13 +9,16 @@ module.exports = class BadDependencyError extends TypeError {
   /**
    * Constructor.
    * @constructs
-   * @param {Error} originalError - The original validation error.
+   * @param {Error} originalError - The original validation error or message.
    */
   constructor(originalError) {
-    super(`Bad dependency (${originalError.message})`);
+    const message = originalError instanceof Error ? originalError.message : originalError;
+    super(`Bad dependency: ${message}`);
 
-    this.name = 'BadDependencyError';
-    this[error] = originalError;
+    this.name = 'NeadBadDependencyError';
+    if (originalError instanceof Error) {
+      this[error] = originalError;
+    }
   }
 
   /**

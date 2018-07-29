@@ -12,9 +12,9 @@ module.exports = class BadDefinitionError extends TypeError {
    * @param {Error} originalError - The original validation error.
    */
   constructor(originalError) {
-    super(`Bad need definition (${originalError.message})`);
+    super(`Bad need definition: ${originalError.message}`);
 
-    this.name = 'BadDefinitionError';
+    this.name = 'NeadBadDefinitionError';
     this[error] = originalError;
   }
 

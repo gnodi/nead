@@ -15,7 +15,7 @@ module.exports = class DependencyError extends Error {
   constructor(name, originalError) {
     super(`[${name}]: ${originalError.message}`);
 
-    this.name = 'DependencyError';
+    this.name = 'NeadDependencyError';
     this[error] = originalError;
   }
 

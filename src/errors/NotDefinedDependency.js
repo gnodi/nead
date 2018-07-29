@@ -12,6 +12,6 @@ module.exports = class NotDefinedDependencyError extends Error {
   constructor(neededDependencies) {
     super(`Dependency is not defined in the list of needed dependencies ['${neededDependencies.join('\', \'')}']`);
 
-    this.name = 'NotDefinedDependencyError';
+    this.name = 'NeadNotDefinedDependencyError';
   }
 };

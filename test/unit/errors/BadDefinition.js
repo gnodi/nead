@@ -10,7 +10,7 @@ describe('BadDefinitionError', () => {
   describe('constructor', () => {
     it('should build an explicit message from arguments', () => {
       error = new BadDefinitionError(validationError);
-      expect(error.message).to.equal('Bad need definition (foo)');
+      expect(error.message).to.equal('Bad need definition: foo');
     });
   });
 

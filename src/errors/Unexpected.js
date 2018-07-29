@@ -14,7 +14,7 @@ module.exports = class UnexpectedError extends Error {
   constructor(originalError) {
     super(`Unexpected error (${originalError.message})`);
 
-    this.name = 'UnexpectedError';
+    this.name = 'NeadUnexpectedError';
     this[error] = originalError;
   }
 

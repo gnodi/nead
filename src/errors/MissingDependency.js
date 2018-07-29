@@ -12,6 +12,6 @@ module.exports = class MissingDependencyError extends Error {
   constructor() {
     super('Dependency has not been injected');
 
-    this.name = 'MissingDependencyError';
+    this.name = 'NeadMissingDependencyError';
   }
 };
