@@ -1,6 +1,7 @@
 'use strict';
 
 const InjectionDefiner = require('../InjectionDefiner');
+const BadTypeError = require('../errors/BadType');
 
 const proxies = Symbol('proxies');
 
@@ -25,13 +26,13 @@ class ProxyInjectionDefiner extends InjectionDefiner {
    */
   setProxy(key, value) {
     if (typeof key !== 'string') {
-      throw new TypeError(`Expected a string key as first argument, got ${typeof value} instead`);
+      throw new BadTypeError(value, 'a string key as first argument');
     }
     if (
       typeof value !== 'object'
       || !value.getValues
     ) {
-      throw new TypeError(`Expected a proxy injector as second argument, got ${typeof value} instead`);
+      throw new BadTypeError(value, 'a proxy injector as second argument');
     }
 
     this[proxies][key] = value;
@@ -47,21 +48,35 @@ class ProxyInjectionDefiner extends InjectionDefiner {
           return expected('proxy injector key', keys);
         }
         return value;
-      }
+      },
+      default: 'direct'
     };
   }
 
   /** @inheritdoc */
   getValues(values, definition) {
-    if (!definition) {
-      return values;
-    }
-
     const proxy = this[proxies][definition];
     return values.reduce(
       (list, value) => list.concat(proxy.getValues(value)),
       []
     );
+  }
+
+  /** @inheritdoc */
+  getValidatedDependency(value, validatedValues, definition) {
+    const proxy = this[proxies][definition];
+    const proxyPrototype = proxy.getPrototype(value);
+
+    if (!proxyPrototype) {
+      return validatedValues[0];
+    }
+
+    return validatedValues.reduce((prototype, validatedValue) => {
+      if (validatedValue && validatedValue.isWrappedValue) {
+        validatedValue.setValidatedValue(prototype);
+      }
+      return prototype;
+    }, proxyPrototype);
   }
 }
 

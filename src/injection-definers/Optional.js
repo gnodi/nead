@@ -15,12 +15,16 @@ class OptionalInjectionDefiner extends InjectionDefiner {
   }
 
   /** @inheritdoc */
-  getValues(values, definition) {
-    const value = values[0];
-    if (!definition && values.length <= 1 && (value === null || value === undefined)) {
+  getValidatedDependency(value, validatedValues, definition) {
+    const validatedValue = validatedValues[0];
+    if (
+      !definition
+      && validatedValues.length <= 1
+      && (validatedValue === null || validatedValue === undefined)
+    ) {
       this[InjectionDefiner.throwMissingDependencyError]();
     }
-    return values;
+    return value;
   }
 }
 

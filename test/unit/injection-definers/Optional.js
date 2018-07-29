@@ -14,41 +14,91 @@ describe('OptionalInjectionDefiner', () => {
   });
 
   describe('"getValues" method', () => {
-    it('should return values to validate', () => {
-      const values = injectionDefiner.getValues(['foo', 'bar'], true);
+    it('should return not altered input values', () => {
+      const values = [1, 2, 3];
+      const injectedValues = injectionDefiner.getValues(values, {});
 
-      expect(values).to.deep.equal(['foo', 'bar']);
+      expect(injectedValues).to.equal(values);
     });
+  });
 
-    it('should throw a missing dependency error on missing dependency', () => {
-      expect(() => injectionDefiner.getValues([], false)).to.throw(
-        MissingDependencyError,
-        'Dependency has not been injected'
+  describe('"validate" method', () => {
+    it('should return input value', () => {
+      const value = {};
+      const validatedValue = injectionDefiner.validate(value, {});
+
+      expect(value).to.equal(validatedValue);
+    });
+  });
+
+  describe('"getValidatedDependency" method', () => {
+    it('should return input value', () => {
+      const value = {};
+      const validatedValues = ['foo'];
+      const validatedDependency = injectionDefiner.getValidatedDependency(
+        value,
+        validatedValues,
+        false
       );
+
+      expect(validatedDependency).to.equal(value);
     });
 
     it('should throw a missing dependency error on null dependency', () => {
-      expect(() => injectionDefiner.getValues([null], false)).to.throw(
+      const value = null;
+      const validatedValues = [null];
+
+      expect(() => injectionDefiner.getValidatedDependency(value, validatedValues, false)).to.throw(
         MissingDependencyError,
         'Dependency has not been injected'
       );
     });
 
     it('should throw a missing dependency error on undefined dependency', () => {
-      expect(() => injectionDefiner.getValues([undefined], false)).to.throw(
+      const value = undefined;
+      const validatedValues = [];
+
+      expect(
+        () => injectionDefiner.getValidatedDependency(value, validatedValues, false)
+      ).to.throw(
         MissingDependencyError,
         'Dependency has not been injected'
       );
     });
 
-    it('should not throw an error on defined but falsy value', () => {
-      const values = injectionDefiner.getValues([''], false);
+    it('should not throw a missing dependency error on not null validated dependency', () => {
+      const value = null;
+      const validatedValues = ['foo'];
 
-      expect(values).to.deep.equal(['']);
+      expect(
+        () => injectionDefiner.getValidatedDependency(value, validatedValues, false)
+      ).to.not.throw(Error);
     });
 
-    it('should not throw an error on authoriezd optional value', () => {
-      expect(() => injectionDefiner.getValues([], true)).to.not.throw(Error);
+    it('should not throw an error on multiple null and undefined validated values', () => {
+      const value = undefined;
+      const validatedValues = ['null', 'undefined'];
+
+      expect(
+        () => injectionDefiner.getValidatedDependency(value, validatedValues, true)
+      ).to.not.throw(Error);
+    });
+
+    it('should not throw an error on defined but falsy value', () => {
+      const validatedValues = [false];
+
+      expect(
+        () => injectionDefiner.getValidatedDependency('', validatedValues, false)
+      ).to.not.throw(Error);
+    });
+
+    it('should not throw an error on authorized optional value', () => {
+      const value = undefined;
+      const validatedValues = [];
+
+      expect(
+        () => injectionDefiner.getValidatedDependency(value, validatedValues, true)
+      ).to.not.throw(Error);
     });
   });
 });

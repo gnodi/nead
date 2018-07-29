@@ -12,7 +12,7 @@ const throwMissingDependencyError = Symbol('throwMissingDependencyError');
  */
 class InjectionDefiner {
   /**
-   * Validation schema for property definition.
+   * Validation schema for dependency definition.
    * @type {Object}
    */
   get schema() {
@@ -21,8 +21,9 @@ class InjectionDefiner {
 
   /**
    * Get the target property to which the value will be set.
-   * @param {string} name - The property name.
-   * @param {*} definition - The property definition.
+   * @param {string} name - The dependency name.
+   * @param {*} definition - The dependency definition.
+   * @returns {string} The property name.
    */
   getTargetProperty(name, definition) { // eslint-disable-line no-unused-vars
     return name;
@@ -31,7 +32,7 @@ class InjectionDefiner {
   /**
    * Get the values to validate.
    * @param {Array<*>} values - The original values.
-   * @param {*} definition - The property definition.
+   * @param {*} definition - The dependency definition.
    * @returns {Array<*>} definition - The values.
    */
   getValues(values, definition) { // eslint-disable-line no-unused-vars
@@ -39,13 +40,25 @@ class InjectionDefiner {
   }
 
   /**
-   * Validate the property value.
-   * @param {string} value - The property value.
-   * @param {*} definition - The property definition.
-   * @throws Error On validation failure.
+   * Validate one of the value of a dependency.
+   * @param {*} value - The value.
+   * @param {*} definition - The dependency definition.
+   * @returns {*} The validated value.
+   * @throws BadDependencyError On bad dependency.
    */
   validate(value, definition) { // eslint-disable-line no-unused-vars
-    throw new Error('\'validate\' method must be implemented');
+    return value;
+  }
+
+  /**
+   * Get a validated dependency.
+   * @param {*} value - The original dependency value.
+   * @param {Array<*>} validatedValues - The validated values.
+   * @param {*} definition - The dependency definition.
+   * @returns {*} The validated dependency.
+   */
+  getValidatedDependency(value, validatedValues, definition) { // eslint-disable-line no-unused-vars
+    return value;
   }
 
   /**
@@ -54,8 +67,7 @@ class InjectionDefiner {
    * @throws BadDependencyError
    */
   [throwBadDependencyError](error) {
-    const err = typeof error === 'string' ? new Error(error) : error;
-    throw new BadDependencyError(err);
+    throw new BadDependencyError(error);
   }
 
   /**

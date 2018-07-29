@@ -8,12 +8,15 @@ const InjectionDefiner = require('../InjectionDefiner');
 class PropertyInjectionDefiner extends InjectionDefiner {
   /** @inheritdoc */
   get schema() {
-    return {type: 'string'};
+    return {
+      type: 'string',
+      required: false
+    };
   }
 
   /** @inheritdoc */
   getTargetProperty(name, definition) {
-    return definition || name;
+    return definition;
   }
 }
 
