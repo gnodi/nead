@@ -1,21 +1,73 @@
 'use strict';
 
+// Force tests execution order.
+require('./errors/BadType');
+require('./errors/NotDefinedDefinitionFactory');
+require('./errors/NotInstantiatedService');
+
 const expect = require('../expect');
 const Container = require('../../src/Container');
+const BadTypeError = require('../../src/errors/BadType');
+const NotDefinedDefinitionFactoryError = require('../../src/errors/NotDefinedDefinitionFactory');
+const NotInstantiatedServiceError = require('../../src/errors/NotInstantiatedService');
 
+const injector = require('../fixtures/injector');
 const validator = require('../fixtures/validator');
+const dependencySorter = require('../fixtures/dependencySorter');
+const referenceResolver = require('../fixtures/referenceResolver');
+const serviceInstantiator = require('../fixtures/serviceInstantiator');
 const serviceDefinitionFactory = require('../fixtures/serviceDefinitionFactory');
 
 const container = new Container();
 
 describe('Container', () => {
+  describe('"injector" setter', () => {
+    it('should accept an injector', () => {
+      container.injector = injector;
+    });
+
+    it('should only accept an injector', () => {
+      expect(() => { container.injector = 'foo'; }).to.throw(BadTypeError);
+    });
+  });
+
   describe('"validator" setter', () => {
     it('should accept a validator', () => {
       container.validator = validator;
     });
 
     it('should only accept a validator', () => {
-      expect(() => { container.validator = 'foo'; }).to.throw(TypeError);
+      expect(() => { container.validator = 'foo'; }).to.throw(BadTypeError);
+    });
+  });
+
+  describe('"dependencySorter" setter', () => {
+    it('should accept a dependency sorter', () => {
+      container.dependencySorter = dependencySorter;
+    });
+
+    it('should only accept a dependency sorter', () => {
+      expect(() => { container.dependencySorter = 'foo'; }).to.throw(BadTypeError);
+    });
+  });
+
+  describe('"referenceResolver" setter', () => {
+    it('should accept a reference resolver', () => {
+      container.referenceResolver = referenceResolver;
+    });
+
+    it('should only accept a reference resolver', () => {
+      expect(() => { container.referenceResolver = 'foo'; }).to.throw(BadTypeError);
+    });
+  });
+
+  describe('"serviceInstantiator" setter', () => {
+    it('should accept a service instantiator', () => {
+      container.serviceInstantiator = serviceInstantiator;
+    });
+
+    it('should only accept a service instantiator', () => {
+      expect(() => { container.serviceInstantiator = 'foo'; }).to.throw(BadTypeError);
     });
   });
 
@@ -38,5 +90,65 @@ describe('Container', () => {
   });
 
   describe('"create" method', () => {
+    it('should create a definition', () => {
+      const definitions = container.create('service', 'foo', {
+        object: {foo: 'bar'},
+        singleton: true,
+        dependencies: {bar: 'foo'}
+      });
+
+      expect(definitions).to.deep.equal([{
+        key: 'foo',
+        object: {
+          foo: 'bar'
+        },
+        singleton: true,
+        dependencies: {bar: 'foo'},
+        dependencyKeys: []
+      }]);
+    });
+
+    it('should failed to create a definition from a not defined factory', () => {
+      expect(() => container.create('dumb', 'foo')).to.throw(
+        NotDefinedDefinitionFactoryError,
+        'No \'dumb\' definition factory defined in the list [\'service\'] of available factories'
+      );
+    });
+  });
+
+  describe('"build" method', () => {
+    it('should instantiate services and inject them into each others', () => {
+      container.create('service', 'bar', {
+        object: {bar: 'foo'},
+        singleton: true
+      });
+
+      const services = container.build();
+
+      expect(services).to.deep.equal({
+        foo: {
+          foo: 'bar',
+          bar: 'foo'
+        },
+        bar: {
+          bar: 'foo'
+        }
+      });
+    });
+  });
+
+  describe('"get" method', () => {
+    it('should retrieve an instantiated service', () => {
+      const foo = container.get('foo');
+
+      expect(foo.foo).to.equal('bar');
+    });
+
+    it('should failed to retrieve a not instantiated service', () => {
+      expect(() => container.get('foobar')).to.throw(
+        NotInstantiatedServiceError,
+        'No \'foobar\' service instantiated'
+      );
+    });
   });
 });
