@@ -1,25 +1,37 @@
 'use strict';
 
 const felv = require('felv');
+const Factory = require('./src/Factory');
+const Registry = require('./src/Registry');
 const Container = require('./src/Container');
 const Injector = require('./src/Injector');
 const DependencySorter = require('./src/DependencySorter');
 const ReferenceResolver = require('./src/ReferenceResolver');
-const ServiceInstantiator = require('./src/ServiceInstantiator');
+const Instantiator = require('./src/Instantiator');
+const Composer = require('./src/Composer');
 const ValueValidationWrapper = require('./src/ValueValidationWrapper');
 const InterfaceInjectionDefiner = require('./src/injection-definers/Interface');
 const OptionalInjectionDefiner = require('./src/injection-definers/Optional');
 const PropertyInjectionDefiner = require('./src/injection-definers/Property');
 const ProxyInjectionDefiner = require('./src/injection-definers/Proxy');
 const ValueInjectionDefiner = require('./src/injection-definers/Value');
+const DataDefinitionFactory = require('./src/definition-factories/Data');
+const FactoryDefinitionFactory = require('./src/definition-factories/Factory');
+const ListDefinitionFactory = require('./src/definition-factories/List');
 const RegistryDefinitionFactory = require('./src/definition-factories/Registry');
 const ServiceDefinitionFactory = require('./src/definition-factories/Service');
+const SetDefinitionFactory = require('./src/definition-factories/Set');
 const DirectProxyInjector = require('./src/proxy-injectors/Direct');
 const FactoryProxyInjector = require('./src/proxy-injectors/Factory');
 const ListProxyInjector = require('./src/proxy-injectors/List');
 const RegistryProxyInjector = require('./src/proxy-injectors/Registry');
 
 const valueValidationWrapper = new ValueValidationWrapper();
+const dependencySorter = new DependencySorter();
+const referenceResolver = new ReferenceResolver();
+const instantiator = new Instantiator();
+const composer = new Composer();
+composer.referenceResolver = referenceResolver;
 
 const directProxyInjector = new DirectProxyInjector();
 const factoryProxyInjector = new FactoryProxyInjector();
@@ -39,9 +51,6 @@ proxyInjectionDefiner.setProxy('registry', registryProxyInjector);
 const valueInjectionDefiner = new ValueInjectionDefiner();
 valueInjectionDefiner.validator = felv;
 
-const registryDefinitionFactory = new RegistryDefinitionFactory();
-const serviceDefinitionFactory = new ServiceDefinitionFactory();
-
 const injector = new Injector();
 injector.validator = felv;
 injector.setInjectionDefiner('interface', interfaceInjectionDefiner);
@@ -50,11 +59,19 @@ injector.setInjectionDefiner('property', propertyInjectionDefiner);
 injector.setInjectionDefiner('proxy', proxyInjectionDefiner);
 injector.setInjectionDefiner('value', valueInjectionDefiner);
 
-const dependencySorter = new DependencySorter();
+const factory = new Factory();
+factory.injector = injector;
+factory.instantiator = instantiator;
 
-const referenceResolver = new ReferenceResolver();
-
-const serviceInstantiator = new ServiceInstantiator();
+const dataDefinitionFactory = new DataDefinitionFactory();
+const factoryDefinitionFactory = new FactoryDefinitionFactory();
+factoryDefinitionFactory.factoryObject = factory;
+const listDefinitionFactory = new ListDefinitionFactory();
+const registryDefinitionFactory = new RegistryDefinitionFactory();
+registryDefinitionFactory.registryObject = Registry;
+const serviceDefinitionFactory = new ServiceDefinitionFactory();
+const setDefinitionFactory = new SetDefinitionFactory();
+setDefinitionFactory.registryObject = Registry;
 
 /**
  * Inject a dependency.
@@ -90,18 +107,33 @@ exports.validate = function validate(object) {
 
 /**
  * Create a dependency injection container.
- * @param {Object} options - The creation options.
+ * @returns {Container} The container.
  */
-exports.createContainer = function createContainer(options) {
-  const container = new Container(options);
+exports.createContainer = function createContainer() {
+  const container = new Container();
 
   container.injector = injector;
   container.validator = felv;
   container.dependencySorter = dependencySorter;
   container.referenceResolver = referenceResolver;
-  container.serviceInstantiator = serviceInstantiator;
+  container.instantiator = instantiator;
+  container.setDefinitionFactory('data', dataDefinitionFactory);
+  container.setDefinitionFactory('factory', factoryDefinitionFactory);
+  container.setDefinitionFactory('list', listDefinitionFactory);
   container.setDefinitionFactory('registry', registryDefinitionFactory);
   container.setDefinitionFactory('service', serviceDefinitionFactory);
+  container.setDefinitionFactory('set', setDefinitionFactory);
 
   return container;
+};
+
+/**
+ * Compose two containers.
+ * @param {string} namespace - The namespace to prefix extension definitions.
+ * @param {Container} targetContainer - The target container.
+ * @param {Container} extensionContainer - The extension container.
+ * @returns {Container} The composed target container.
+ */
+exports.compose = function compose(namespace, targetContainer, extensionContainer) {
+  return composer.compose(namespace, targetContainer, extensionContainer);
 };
