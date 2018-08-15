@@ -5,6 +5,7 @@ const nead = require('../..');
 const Registry = require('../../src/Registry');
 const DependencyError = require('../../src/errors/Dependency');
 const InaccessibleMemberError = require('../../src/errors/InaccessibleMember');
+
 const factory = require('../fixtures/factory');
 
 describe('nead', () => {
