@@ -1,5 +1,6 @@
 'use strict';
 
+const BadTypeError = require('./errors/BadType');
 const MissingItemError = require('./errors/MissingItem');
 
 const type = Symbol('type');
@@ -11,11 +12,23 @@ const items = Symbol('items');
 class Registry {
   /**
    * @constructs Registry
-   * @param {string} type_ - The item type.
+   * @param {string} [type_='item'] - The item type.
    */
-  constructor(type_) {
-    this[type] = type_;
+  constructor(type_ = 'item') {
+    this.setType(type_);
     this[items] = {};
+  }
+
+  /**
+   * Set item type.
+   * @param {string} value - The type.
+   */
+  setType(value) {
+    if (typeof value !== 'string') {
+      throw new BadTypeError(value, 'a string as first argument');
+    }
+
+    this[type] = value;
   }
 
   /**
