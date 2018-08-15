@@ -8,6 +8,7 @@ const functionSerializer = require('../../fixtures/functionSerializer');
 
 const definitionFactory = new RegistryDefinitionFactory();
 const registryObject = {
+  setType: true,
   get: true,
   set: true,
   getList: true,
@@ -17,6 +18,8 @@ class Registry {
   constructor() {
     this.items = {};
   }
+  setType(value) { this.type = value; }
+  getType() { return this.type; }
   get(key) { return this.items[key]; }
   set(key, value) { this.items[key] = value; }
   getList() {}
@@ -43,13 +46,17 @@ describe('RegistryDefinitionFactory', () => {
 
   describe('"schema" getter', () => {
     it('should retrieve validation schema for creation options', () => {
-      expect(definitionFactory.schema).to.deep.equal({items: {type: Object}});
+      expect(definitionFactory.schema).to.deep.equal({
+        type: {type: 'string', required: false},
+        items: {type: Object}
+      });
     });
   });
 
   describe('"create" method', () => {
     it('should create items and registry definitions', () => {
       const definitions = definitionFactory.create('items', {
+        type: 'element',
         items: {
           foo: {plop: 1},
           bar: {plip: 2},
@@ -59,41 +66,81 @@ describe('RegistryDefinitionFactory', () => {
 
       expect(functionSerializer.serialize(definitions)).to.deep.equal([
         {
-          key: 'items.foo',
-          object: {plop: 1}
-        },
-        {
-          key: 'items.bar',
-          object: {plip: 2}
-        },
-        {
-          key: 'items.foobar',
-          object: '#plap'
-        },
-        {
           key: 'items',
           object: {
+            setType: true,
             get: true,
             set: true,
             getList: true,
             getMap: true
           },
           dependencies: {
+            type: {
+              injectedValue: 'element',
+              injectDependency: 'function'
+            },
             items: {
               injectedValue: {
-                foo: '#items.foo',
-                bar: '#items.bar',
-                foobar: '#items.foobar'
+                foo: {plop: 1},
+                bar: {plip: 2},
+                foobar: '#plap'
               },
               injectDependency: 'function'
             }
           }
         }
       ]);
-      const injectedValue = definitions[3].dependencies.items.injectedValue;
+
       const injectedRegistry = new Registry();
-      definitions[3].dependencies.items.injectDependency(injectedRegistry, injectedValue);
-      expect(injectedRegistry.get('bar')).to.deep.equal('#items.bar');
+      const injectedType = definitions[0].dependencies.type.injectedValue;
+      definitions[0].dependencies.type.injectDependency(
+        injectedRegistry,
+        injectedType
+      );
+      expect(injectedRegistry.getType()).to.equal('element');
+      const injectedItems = definitions[0].dependencies.items.injectedValue;
+      definitions[0].dependencies.items.injectDependency(
+        injectedRegistry,
+        injectedItems
+      );
+      expect(injectedRegistry.get('foobar')).to.deep.equal('#plap');
+    });
+
+    it('should automatically generate item type from service key when no type is specified', () => {
+      const definitions = definitionFactory.create('superIncredibleObjectRegistry', {
+        items: {
+          foo: {plop: 1},
+          bar: {plip: 2},
+          foobar: '#plap'
+        }
+      });
+
+      expect(functionSerializer.serialize(definitions)).to.deep.equal([
+        {
+          key: 'superIncredibleObjectRegistry',
+          object: {
+            setType: true,
+            get: true,
+            set: true,
+            getList: true,
+            getMap: true
+          },
+          dependencies: {
+            type: {
+              injectedValue: 'super incredible object',
+              injectDependency: 'function'
+            },
+            items: {
+              injectedValue: {
+                foo: {plop: 1},
+                bar: {plip: 2},
+                foobar: '#plap'
+              },
+              injectDependency: 'function'
+            }
+          }
+        }
+      ]);
     });
   });
 });

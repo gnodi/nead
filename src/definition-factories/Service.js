@@ -17,8 +17,12 @@ class ServiceDefinitionFactory extends DefinitionFactory {
         default: false
       },
       dependencies: {
-        type: 'object',
+        type: Object,
         default: {}
+      },
+      need: {
+        type: Object,
+        required: false
       }
     };
   }

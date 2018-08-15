@@ -22,6 +22,7 @@ class RegistryDefinitionFactory extends DefinitionFactory {
       || (!value.set && !value.prototype.set)
       || (!value.getList && !value.prototype.getList)
       || (!value.getMap && !value.prototype.getMap)
+      || (!value.setType && !value.prototype.setType)
     ) {
       throw new BadTypeError(value, 'a registry object/class');
     }
@@ -32,6 +33,10 @@ class RegistryDefinitionFactory extends DefinitionFactory {
   /** @inheritdoc */
   get schema() {
     return {
+      type: {
+        type: 'string',
+        required: false
+      },
       items: {
         type: Object
       }
@@ -40,31 +45,28 @@ class RegistryDefinitionFactory extends DefinitionFactory {
 
   /** @inheritdoc */
   create(key, options) {
-    const itemKeys = Object.keys(options.items);
-    // Create definitions of items.
-    const definitions = itemKeys.map(itemKey => ({
-      key: `${key}.${itemKey}`,
-      object: options.items[itemKey]
-    }));
+    const type = options.type
+      ? options.type
+      : key.replace('Registry', '').replace(/[A-Z]/g, match => ` ${match.toLowerCase()}`);
 
-    // Create definition of registry.
-    definitions.push({
+    return [{
       key,
       object: this[registryObject],
       dependencies: {
+        type: {
+          injectedValue: type,
+          injectDependency: (registry, injectedType) => {
+            registry.setType(injectedType);
+          }
+        },
         items: {
-          injectedValue: itemKeys.reduce((map, itemKey) => Object.assign(
-            map,
-            {[itemKey]: `#${key}.${itemKey}`}
-          ), {}),
+          injectedValue: options.items,
           injectDependency: (registry, items) => {
             Object.keys(items).forEach(itemKey => registry.set(itemKey, items[itemKey]));
           }
         }
       }
-    });
-
-    return definitions;
+    }];
   }
 }
 
