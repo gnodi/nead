@@ -209,7 +209,10 @@ class Injector {
         throw new NotDefinedDependencyError(Object.keys(needed));
       }
 
-      return this[definitionValidator].validate(needed[property]);
+      return this[definitionValidator].validate(
+        needed[property],
+        {namespace: `${object.constructor.name}.${property}`}
+      );
     } catch (error) {
       const forwardedError = error instanceof NotDefinedDependencyError
         ? error
@@ -282,7 +285,10 @@ class Injector {
       return map;
     }, {});
 
-    return this[validator].compile(schema);
+    return this[validator].compile(schema, {
+      immutable: true,
+      required: true
+    });
   }
 
   /**

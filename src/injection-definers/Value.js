@@ -34,7 +34,14 @@ class ValueInjectionDefiner extends InjectionDefiner {
   /** @inheritdoc */
   validate(value, definition) { // eslint-disable-line no-unused-vars
     try {
-      const validatedValue = this[validator].validate({property: value}, {property: definition});
+      const validatedValue = this[validator].validate(
+        {property: value},
+        {property: definition},
+        {
+          immutable: true,
+          required: true
+        }
+      );
       return validatedValue.property;
     } catch (error) {
       if (value === null || value === undefined) {
