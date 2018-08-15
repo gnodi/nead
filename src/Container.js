@@ -143,10 +143,11 @@ class Container {
 
   /**
    * Instantiate and inject services into each others.
-   * @returns {Array<*>} The list of instantiated services.
+   * @returns {Array<string,Object>} The list of instantiated services.
    */
   build() {
     const dependencySortedDefinitions = this[dependencySorter].sort(this[definitions]);
+    let references = {};
 
     this[services] = dependencySortedDefinitions.reduce((map, definition) => {
       // Instantiate service object.
@@ -154,22 +155,38 @@ class Container {
         definition.object,
         definition.singleton
       );
+
+      // Resolve service references.
       const resolvedDefinition = this[referenceResolver].resolve(
         definition,
-        map
+        references
       );
 
-      const hasDependencies = Object.keys(definition.dependencies).length !== 0;
-
-      if (hasDependencies) {
-        // eslint-disable-next-line no-param-reassign
-        map[definition.key] = this[injector].injectSet(
-          service,
-          resolvedDefinition.dependencies
-        );
-      } else {
-        map[definition.key] = service; // eslint-disable-line no-param-reassign
+      // Merge service need with definition need.
+      if (definition.need && !Object.getOwnPropertyDescriptor(service, 'need')) {
+        Object.defineProperty(service, 'need', {
+          value: Object.assign({}, service.need, definition.need),
+          enumerable: false
+        });
       }
+
+      // Inject service dependencies.
+      const injectedService = this[injector].injectSet(
+        service,
+        resolvedDefinition.dependencies,
+        true
+      );
+
+      // Add service to the service map.
+      // eslint-disable-next-line no-param-reassign
+      map[definition.key] = injectedService;
+
+      // Add service to reference map.
+      references = Object.assign(
+        {},
+        this[referenceResolver].build(definition.key, injectedService),
+        references
+      );
 
       return map;
     }, {});
@@ -180,7 +197,7 @@ class Container {
   /**
    * Get a service.
    * @param {string} key - The service key.
-   * @returns {*} The service.
+   * @returns {Object} The service.
    * @throws {NotInstantiatedServiceError} On not instantiated service.
    */
   get(key) {

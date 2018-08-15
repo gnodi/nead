@@ -27,6 +27,28 @@ class ReferenceResolver {
   }
 
   /**
+   * Build references.
+   * @param {string} namespace - The reference namespace.
+   * @param {*} value - The context value.
+   * @returns {Object} The reference map.
+   */
+  build(namespace, value) {
+    let references = {[namespace]: value};
+
+    if (value && typeof value === 'object' && namespace.split('.').length <= 20) {
+      let object = value;
+      do {
+        references = Object.keys(object).reduce((map, key) => Object.assign(
+          {},
+          this.build(`${namespace}.${key}`, value[key]),
+          map
+        ), references);
+        object = Object.getPrototypeOf(object);
+      } while (object);
+    }
+
+    return references;
+  }
    * Resolve references.
    * @param {*} value - The value eventually containing reference strings.
    * @param {Object} map - The reference map.

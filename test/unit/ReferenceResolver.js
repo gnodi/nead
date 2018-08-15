@@ -83,6 +83,72 @@ describe('ReferenceResolver', () => {
     });
   });
 
+  describe('"build" method', () => {
+    it('should build reference map from a value', () => {
+      const references = referenceResolver.build('foo', 'bar');
+
+      expect(references).to.deep.equal({foo: 'bar'});
+    });
+
+    it('should build reference map from an object value', () => {
+      const references = referenceResolver.build('foo', {
+        plop: 'plop',
+        plip: {
+          plap: {
+            plup: 'plep'
+          }
+        }
+      });
+
+      expect(references).to.deep.equal({
+        foo: {
+          plop: 'plop',
+          plip: {
+            plap: {
+              plup: 'plep'
+            }
+          }
+        },
+        'foo.plop': 'plop',
+        'foo.plip': {
+          plap: {
+            plup: 'plep'
+          }
+        },
+        'foo.plip.plap': {
+          plup: 'plep'
+        },
+        'foo.plip.plap.plup': 'plep'
+      });
+    });
+
+    it('should handle an embeded limit to avoid cyclic dependency infinite loop', () => {
+      const foo = {};
+      const bar = {foo};
+      foo.bar = bar;
+
+      const references = referenceResolver.build('foo', foo);
+
+      expect(Object.keys(references).length).to.equal(21);
+    });
+
+    it('should look into prototypal chain', () => {
+      const foo = {plop: 'plip'};
+      const bar = Object.create(foo);
+      bar.plap = 'plup';
+
+      const references = referenceResolver.build('bar', bar);
+
+      expect(references).to.deep.equal({
+        bar: {
+          plop: 'plip',
+          plap: 'plup'
+        },
+        'bar.plop': 'plip',
+        'bar.plap': 'plup'
+      });
+    });
+  });
   describe('"resolve" method', () => {
     it('should resolve a reference string from a reference map', () => {
       const resolvedValue = referenceResolver.resolve('#foo', {foo: 'bar'});
