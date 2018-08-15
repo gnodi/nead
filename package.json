@@ -1,7 +1,7 @@
 {
   "name": "nead",
   "description": "Dependency injector and container.",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "author": "Thomas Prelot <tprelot@gmail.com> (https://github.com/Gnucki)",
   "contributors": [],
   "keywords": [
