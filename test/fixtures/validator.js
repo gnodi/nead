@@ -12,7 +12,7 @@ module.exports = {
         throw new Error('unexpected');
       }
 
-      if (typeof value[key] !== schema[key].type) { // eslint-disable-line valid-typeof
+      if (schema[key].type !== 'mixed' && typeof value[key] !== schema[key].type) { // eslint-disable-line valid-typeof
         const error = new TypeError('bad type');
         error.expectedType = schema[key].type;
         throw error;
