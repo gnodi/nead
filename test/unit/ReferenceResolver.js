@@ -149,6 +149,37 @@ describe('ReferenceResolver', () => {
       });
     });
   });
+
+  describe('"prefix" method', () => {
+    it('should prefix reference string with a namespace', () => {
+      const resolvedValue = referenceResolver.prefix('foo', {plop: '#plip'});
+
+      expect(resolvedValue).to.deep.equal({plop: '#foo.plip'});
+    });
+
+    it('should resolve reference strings inside an object', () => {
+      const resolvedValue = referenceResolver.prefix('namespace', {
+        plop: {
+          plip: {
+            plap: '#foo'
+          }
+        },
+        plup: ['#bar'],
+        plep: '#foo#bar'
+      });
+
+      expect(resolvedValue).to.deep.equal({
+        plop: {
+          plip: {
+            plap: '#namespace.foo'
+          }
+        },
+        plup: ['#namespace.bar'],
+        plep: '#namespace.foo#namespace.bar'
+      });
+    });
+  });
+
   describe('"resolve" method', () => {
     it('should resolve a reference string from a reference map', () => {
       const resolvedValue = referenceResolver.resolve('#foo', {foo: 'bar'});
@@ -164,7 +195,7 @@ describe('ReferenceResolver', () => {
               plap: '#foo'
             }
           },
-          plup: '#bar'
+          plup: ['#bar']
         },
         {
           foo: 'bar',
@@ -178,7 +209,7 @@ describe('ReferenceResolver', () => {
             plap: 'bar'
           }
         },
-        plup: 'foo'
+        plup: ['foo']
       });
     });
 

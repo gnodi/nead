@@ -116,6 +116,20 @@ describe('Container', () => {
     });
   });
 
+  describe('"definitions" getter', () => {
+    it('should return container definition list', () => {
+      expect(container.definitions).to.deep.equal([{
+        key: 'foo',
+        object: {
+          foo: 'bar'
+        },
+        singleton: true,
+        dependencies: {bar: 'foo'},
+        dependencyKeys: []
+      }]);
+    });
+  });
+
   describe('"build" method', () => {
     it('should instantiate services and inject them into each others', () => {
       container.create('service', 'bar', {
@@ -132,6 +146,29 @@ describe('Container', () => {
         },
         bar: {
           bar: 'foo'
+        }
+      });
+    });
+
+    it('should handle need injection from definition', () => {
+      container.create('service', 'bar', {
+        object: {bar: 'foo'},
+        singleton: true,
+        need: {
+          foo: 'bar'
+        }
+      });
+
+      const services = container.build();
+
+      expect(services).to.deep.equal({
+        foo: {
+          foo: 'bar',
+          bar: 'foo'
+        },
+        bar: {
+          bar: 'foo',
+          foo: 'bar'
         }
       });
     });
@@ -226,6 +263,78 @@ describe('Container', () => {
         NotDefinedDefinitionFactoryError,
         'No \'dumb\' definition factory defined in the list [\'service\'] of available factories'
       );
+    });
+  });
+
+  describe('"clear" method', () => {
+    it('should clear definitions and service instantiation from container', () => {
+      expect(() => container.get('foo')).to.not.throw(Error);
+      expect(container.definitions.length).to.not.equal(0);
+
+      container.clear();
+
+      expect(() => container.get('foo')).to.throw(
+        NotInstantiatedServiceError,
+        'No \'foo\' service instantiated'
+      );
+      expect(container.definitions.length).to.equal(0);
+    });
+  });
+
+  describe('"addDefinitions" method', () => {
+    it('should allow to add definitions to the container list of definitions', () => {
+      expect(container.definitions).to.deep.equal([]);
+
+      container.addDefinitions([
+        {
+          key: 'plop',
+          object: {},
+          dependencies: {}
+        }
+      ]);
+
+      expect(container.definitions).to.deep.equal([
+        {
+          key: 'plop',
+          object: {},
+          dependencies: {},
+          dependencyKeys: []
+        }
+      ]);
+
+      container.addDefinitions([
+        {
+          key: 'plip',
+          object: {},
+          dependencies: {}
+        },
+        {
+          key: 'plap',
+          object: {},
+          dependencies: {}
+        }
+      ]);
+
+      expect(container.definitions).to.deep.equal([
+        {
+          key: 'plop',
+          object: {},
+          dependencies: {},
+          dependencyKeys: []
+        },
+        {
+          key: 'plip',
+          object: {},
+          dependencies: {},
+          dependencyKeys: []
+        },
+        {
+          key: 'plap',
+          object: {},
+          dependencies: {},
+          dependencyKeys: []
+        }
+      ]);
     });
   });
 });

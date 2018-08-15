@@ -49,6 +49,20 @@ class ReferenceResolver {
 
     return references;
   }
+
+  /**
+   * Prefix references.
+   * @param {string} namespace - The namespace prefix.
+   * @param {*} value - The value eventually containing reference strings.
+   * @returns {*} The value with prefixed references.
+   */
+  prefix(namespace, value) {
+    return this[processReferences](value, (agg, reference) => (
+      `${agg}#${namespace}.${reference}`
+    ), '');
+  }
+
+  /**
    * Resolve references.
    * @param {*} value - The value eventually containing reference strings.
    * @param {Object} map - The reference map.
@@ -118,12 +132,15 @@ class ReferenceResolver {
    * @protected
    */
   [processReferences](value, processing, initialValue) {
-    if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    const isArray = Array.isArray(value);
+    const isBasicObject = Object.getPrototypeOf(value) === Object.prototype;
+
+    if (value && (isArray || isBasicObject)) {
       return Object.keys(value).reduce((object, property) => {
         // eslint-disable-next-line no-param-reassign
         object[property] = this[processReferences](value[property], processing, initialValue);
         return object;
-      }, {});
+      }, isArray ? [] : {});
     }
 
     if (typeof value === 'string' && /^#[^#]/.test(value)) {

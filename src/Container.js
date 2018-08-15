@@ -26,10 +26,9 @@ class Container {
    * @constructs
    */
   constructor() {
-    this[definitions] = [];
+    this.clear();
     this[definitionFactories] = {};
     this[definitionValidators] = {};
-    this[services] = {};
   }
 
   /**
@@ -96,6 +95,47 @@ class Container {
 
     this[instantiator] = value;
   }
+
+  /**
+   * Definition list.
+   * @type {Array<Object>}
+   */
+  get definitions() {
+    return this[definitions];
+  }
+
+  /**
+   * Add definitions to definition list.
+   * @param {Array<Object>} newDefinitions - The new definitions.
+   * @returns {Array<Object>} The resulting list.
+   */
+  addDefinitions(newDefinitions) {
+    // Purge overwritten definitions.
+    const newDefinitionKeys = newDefinitions.reduce((map, definition) => {
+      map[definition.key] = true; // eslint-disable-line no-param-reassign
+      return map;
+    }, {});
+    const purgedDefinitions = this[definitions].filter(({key}) => !(key in newDefinitionKeys));
+
+    // Normalize new definitions.
+    const normalizedDefinitions = newDefinitions.map(definition => Object.assign(
+      {dependencies: {}},
+      definition,
+      {dependencyKeys: this[referenceResolver].find(definition)}
+    ));
+
+    // Add new definitions to the definition list.
+    this[definitions] = purgedDefinitions.concat(normalizedDefinitions);
+
+    return this[definitions];
+  }
+
+  /**
+   * Clear container from definitions and service instantiations.
+   */
+  clear() {
+    this[definitions] = [];
+    this[services] = {};
   }
 
   /**
@@ -117,7 +157,11 @@ class Container {
     }
 
     this[definitionFactories][key] = value;
-    this[definitionValidators][key] = this[validator].compile(value.schema);
+    this[definitionValidators][key] = this[validator].compile(value.schema, {
+      immutable: true,
+      required: true,
+      namespace: 'definitions'
+    });
   }
 
   /**
@@ -127,18 +171,23 @@ class Container {
    * @param {Object} [options={}] - The options.
    * @returns {Array<*>} The list of created definitions.
    * @throws {Error} On not defined factory.
+   * @throws {Error} On not validated creation options.
    */
   create(factoryKey, serviceKey, options = {}) {
     const factory = this[getDefinitionFactory](factoryKey);
-    const newDefinitions = factory.create(serviceKey, options).map(definition => Object.assign(
-      {dependencies: {}},
-      definition,
-      {dependencyKeys: this[referenceResolver].find(definition)}
-    ));
 
-    this[definitions] = this[definitions].concat(newDefinitions);
+    const validatedOptions = this[definitionValidators][factoryKey].validate(options, {
+      namespace: serviceKey
+    });
 
-    return newDefinitions;
+    const newDefinitions = factory.create(serviceKey, validatedOptions);
+
+    this.addDefinitions(newDefinitions);
+
+    return newDefinitions.map(newDefinition =>
+      this[definitions].find(definition => definition.key === newDefinition.key)
+    );
+  }
 
   /**
    * Create a set of service definitions and optionaly build container.
