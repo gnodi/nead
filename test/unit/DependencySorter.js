@@ -11,7 +11,7 @@ const dependencySorter = new DependencySorter();
 
 describe('DependencySorter', () => {
   describe('"sort" method', () => {
-    it('should sort definitions with no dependencyKeys', () => {
+    it('should keep definitions order with no dependencyKeys', () => {
       const orderedKeys = dependencySorter.sort([
         {key: 'a', dependencyKeys: []},
         {key: 'b', dependencyKeys: []},
