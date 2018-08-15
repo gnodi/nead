@@ -139,6 +139,33 @@ class Container {
     this[definitions] = this[definitions].concat(newDefinitions);
 
     return newDefinitions;
+
+  /**
+   * Create a set of service definitions and optionaly build container.
+   * @param {Object<string,Object>} factoryDefinitions - The factory definitions.
+   * @param {Object} [build=false] - Whether to build the container or not.
+   * @throws {Error} On not defined factory.
+   * @throws {Error} On not validated creation options.
+   */
+  createSet(factoryDefinitions, build = false) {
+    const newDefinitions = Object.keys(factoryDefinitions).reduce((list, key) => {
+      const factoryDefinition = factoryDefinitions[key];
+      // Clean factory field.
+      const cleanedDefinition = Object.keys(factoryDefinition).reduce((map, attribute) => {
+        if (attribute !== 'factory') {
+          map[attribute] = factoryDefinition[attribute]; // eslint-disable-line no-param-reassign
+        }
+        return map;
+      }, {});
+      const createdDefinitions = this.create(
+        factoryDefinition.factory,
+        key,
+        cleanedDefinition
+      );
+      return list.concat(createdDefinitions);
+    }, []);
+
+    return build ? this.build() : newDefinitions;
   }
 
   /**

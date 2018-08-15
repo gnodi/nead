@@ -151,4 +151,81 @@ describe('Container', () => {
       );
     });
   });
+
+  describe('"createSet" method', () => {
+    it('should create a set of definitions', () => {
+      const definitions = container.createSet({
+        foo: {
+          factory: 'service',
+          object: {foo: 'bar'},
+          singleton: true,
+          dependencies: {bar: 'foo'}
+        },
+        bar: {
+          factory: 'service',
+          object: {bar: 'foo'}
+        }
+      });
+
+      expect(definitions).to.deep.equal([
+        {
+          key: 'foo',
+          object: {
+            foo: 'bar'
+          },
+          singleton: true,
+          dependencies: {bar: 'foo'},
+          dependencyKeys: []
+        },
+        {
+          key: 'bar',
+          object: {
+            bar: 'foo'
+          },
+          dependencies: {},
+          dependencyKeys: []
+        }
+      ]);
+    });
+
+    it('should allow to build container', () => {
+      const services = container.createSet({
+        foo: {
+          factory: 'service',
+          object: {foo: 'bar'},
+          singleton: true,
+          dependencies: {bar: 'foo'}
+        },
+        bar: {
+          factory: 'service',
+          object: {bar: 'foo'}
+        }
+      }, true);
+
+      expect(services).to.deep.equal({
+        foo: {
+          foo: 'bar',
+          bar: 'foo'
+        },
+        bar: {
+          bar: 'foo'
+        }
+      });
+      expect(container.get('bar').bar).to.equal('foo');
+    });
+
+    it('should failed to create a definition from a not defined factory', () => {
+      expect(() => container.createSet({
+        foo: {
+          factory: 'dumb',
+          object: {foo: 'bar'},
+          singleton: true,
+          dependencies: {bar: 'foo'}
+        }
+      })).to.throw(
+        NotDefinedDefinitionFactoryError,
+        'No \'dumb\' definition factory defined in the list [\'service\'] of available factories'
+      );
+    });
+  });
 });
