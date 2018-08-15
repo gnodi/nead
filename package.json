@@ -33,9 +33,9 @@
     "@gnodi/eslint-config": "^0.4.0",
     "chai": "^4.1.0",
     "chai-as-promised": "^7.1.1",
-    "coveralls": "^3.0.0",
-    "mocha": "^5.0.0",
-    "nyc": "^11.0.3"
+    "coveralls": "^3.0.2",
+    "mocha": "^5.2.0",
+    "nyc": "^13.0.1"
   },
   "license": "MIT",
   "repository": {
