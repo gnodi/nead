@@ -1,11 +1,12 @@
 # nead
 
-**nead** is a powerful but simple tool helping you to enhance [low coupling](https://en.wikipedia.org/wiki/Coupling_(computer_programming)) between your components thanks to [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection).
+**nead** is a powerful but simple tool helping you to code in a more [declarative way](http://latentflip.com/imperative-vs-declarative) and to enhance [low coupling](https://en.wikipedia.org/wiki/Coupling_(computer_programming)) between your components thanks to [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection).
 
 Earnings this package can bring to your code:
 - less and dynamic dependencies: **more scalability**
 - identifiable dependencies: **more maintainability**
 - injected dependencies: **easier testing** (automatic isolation, straightforward validated mocks, ...)
+- easier to understand code: **more all**
 
 > nead can be used both client and server sides.
 
@@ -64,6 +65,7 @@ $ npm install --save nead
 ```js
 // CommonJS
 const nead = require('nead');
+
 // ES6 modules
 import nead from 'nead';
 ```
@@ -195,7 +197,7 @@ program.run(); // Display 'Hello world!'.
 #### Inject many dependencies all at once
 You can inject many dependencies in one call:
 ```js
-nead.injectSet = function(object, dependencies)
+nead.injectSet = function(object, dependencies) {}
 ```
 
 Example:
@@ -526,24 +528,21 @@ console.log(originalObject); // ['plop']
 ### Dependency injection container
 Of course, this is a nice thing to inject dependencies like that but it can be a little tedious to:
 - instantiate all your services in the correct order
-- instantiate helper objects (registries, list, ...)
+- instantiate helper objects (registries, lists, ...)
 - cut your (too big unreadable) injection file
 
-You can pass to the next level of dependency injection using a dependency injection container!
+No problem! You can pass to the next level of dependency injection using a dependency injection container!
 
 #### Instantiate a container
 ```js
 const options = {};
-const container = nead.createContainer(options);
+const container = nead.createContainer();
 ```
-
-Options:
-- `logger`: A logger with `error`, `warn`, `info`, `debug` and `trace` methods (default: console).
 
 #### Use factories to create service definitions
 You can create service definitions thanks to container `create` method:
 ```js
-container.create = function (factoryName, creationName, creationOptions)
+container.create = function (factoryName, creationName, creationOptions) {}
 ```
 
 Arguments:
@@ -574,9 +573,10 @@ container.create('service', 'program', {
 ```
 
 Creation options:
-- `{*} object`: The service.
+- `{Object} object`: The service.
 - `{boolean} [singleton=false]`: If set to true, use the given service value as is, otherwise use `new` operator on functions and `Object.create` on objects.
 - `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need property/function returned keys).
+- `{Object} [need]`: A need definition to merge with service own need definition.
 
 > `#greeter` is a reference string to a service that will be resolved at container building.
 > If you want to inject a standard string starting with a `#`, escape it with a double `##`.
@@ -589,6 +589,7 @@ container.create('service', 'superiorGreeter', {
 });
 
 container.create('registry', 'greeterRegistry' {
+  type: 'greeter',
   items: {
     friend: FriendGreeter,
     family: FamilyGreeter,
@@ -601,24 +602,13 @@ container.create('registry', 'greeterRegistry' {
     }
   }
 });
-
-container.create('service', 'strangerGreeter', {
-  object: strangerGreeter,
-  singleton: true,
-  // The following tag allows to tell 'greeterRegistry' to add this service
-  // as an item with 'stranger' key.
-  tags: {
-    greeterRegistry: {key: 'stranger'}
-  }
-});
 ```
 
-This will create a registry service with 6 items (`friend`, `family`, `superior`, `boss`, `default`, `stranger`), a `strangerGreeter` service and a `superiorGreeter` service.
+This will create a registry service with 5 items (`friend`, `family`, `superior`, `boss`, `default`) and a `superiorGreeter` service.
 
 Creation options:
+- `{string} [type=item]`: The type of item of the registry. Generate default name from service key (e.g. `superGreeterRegistry` => `super greeter`).
 - `{Object} items`: An object of homogeneous services/values.
-
-> Tags are useful to describe interactions with already defined services.
 
 Then, you can use your registry like the following:
 ```js
@@ -634,20 +624,12 @@ container.create('service', 'superiorGreeter', {
   object: SuperiorGreeter
 });
 
-container.create('service', 'strangerGreeter', {
-  object: strangerGreeter,
-  singleton: true,
-  tags: {
-    greeterList: {index: 1}
-  }
-});
-
 container.create('list', 'greeterList' {
   items: [FriendGreeter, FamilyGreeter, '#superiorGreeter']
 });
 ```
 
-This will create an ordered list service with 4 items [`friend`, `stranger`, family`, `superior`], a `strangerGreeter` service and a `superiorGreeter` service.
+This will create an ordered list service with 3 items [`friend`, `family`, `superior`] and a `superiorGreeter` service.
 
 Creation options:
 - `{Array|Object} items`: An array (or object for unordered list) of homogeneous services/values.
@@ -726,26 +708,24 @@ container.create('service', 'greeter.you', {
 });
 ```
 
-> A use case for `data` factory is to define a configuration describing a dynamic execution flow from low coupled components.
+> An example of use case for `data` factory is to define a configuration describing a dynamic execution flow from low coupled components.
 
 ##### Set factory
 You can define a set of services thanks to `set` factory:
 ```js
 container.create('set', 'greeter', {
-  items: [
-    {
-      name: 'friend',
+  items: {
+    friend: {
       object: FriendGreeter,
       dependencies: {
         name: 'Jane Doe'
       }
     },
-    {
-      name: 'stranger',
+    stranger: {
       object: strangerGreeter,
       singleton: true
     }
-  ],
+  },
   dependencies: {
     name: 'John Doe'
   },
@@ -760,8 +740,8 @@ This will create 4 services:
 - 1 list: `greeterList` containing the 2 greeters
 
 Creation options:
-- `{Object|Array} items`: An array or object of items with the same options as for [`service` factory](#service-factory). Use `name` attribute for arrays and key for objects in order to build the name of the services.
-- `{*} [object]`: The default service (constructor or prototype for instance).
+- `{Object} items`: An object of items with the same options as for [`service` factory](#service-factory). Options will override default ones defined in the definition root.
+- `{Object} [object]`: The default service (constructor or prototype for instance).
 - `{boolean} [singleton=false]`: The default singleton value. If set to true, use the given service value as is, otherwise use `new` operator on functions and `Object.create` on objects.
 - `{Object} [dependencies={}]`: The dependencies (keys being simple properties, property descriptors or need property/function returned keys) that will be injected to all created services.
 - `{string} [registry]`: An optional registry name to create containing the created services.
@@ -774,38 +754,26 @@ container.build();
 ```
 
 Here is the algorithm used during building:
-1. Compute instantiation order
-2. For each factory
-  1. Resolve references
-  2. Validate factory options
-  3. Create service builder
-  4. For each builder
-    1. Instantiate service
-    2. Inject dependencies
-    3. Validate dependencies
-    4. Call 'init' method if exists
-
-At debug level, a dependency graph is logged:
-```sh
-|- program
-   |- greeterRegistry
-      |- greeter.friend
-      |- greeter.family
-      |- strangerGreeter
-```
+1. Sort definitions in instantiation order
+2. For each definition
+  1. Instantiate service
+  2. Resolve references
+  3. Merge service need with definition need.
+  4. Inject and validate dependencies
+  5. Build service references
 
 #### Create services from a definition object
 Ok, this is correcting previous exposed problems but it is still a bit verbose. Instead of defining each factory independently, you can call many factories at the same time using `createSet` method:
 ```js
-container.createSet = function(definitions, build = false)
+container.createSet = function(definitions, build = false) {}
 ```
 
 Example:
 ```js
 container.createSet({
-  // Create `program` service.
+  // Create  a simple `program` service.
   program: {
-    // Use `service` factory by default.
+    factory: 'service',
     object: program,
     singleton: true,
     dependencies: {
@@ -814,7 +782,6 @@ container.createSet({
   },
   // Create a set of `greeter` services with a registry.
   greeter: {
-    // Use `set` factory.
     factory: 'set',
     items: [
       {
@@ -832,7 +799,7 @@ container.createSet({
     },
     registry: 'greeterRegistry',
   },
-  // Create a `config` service.
+  // Create a data `config` service.
   config: {
     factory: 'data',
     data: {
@@ -864,7 +831,7 @@ container.createSet({
 ### Composition
 A nice feature in nead is that you can compose your containers thanks to `compose` method:
 ```js
-container.compose = function(namespace, container)
+container.compose = function(namespace, container) {}
 ```
 This is useful in order to use service definitions of dependency packages.
 
@@ -912,7 +879,9 @@ container.build();
 > with the namespace passed to the 'compose' method.
 
 ### Hacking
-Here is some tricks to use advanced nead features.
+**This part is not implemented yet.**
+
+Here is some tricks to customize your nead experience!
 
 #### Define your own injection proxy
 ```js
@@ -948,6 +917,8 @@ In integration tests you would like to test the interactions between many object
 
 To make your life easy, you may want to define one (or more) mocked (or not) container(s):
 ```js
+// test/fixtures/container.js
+
 const nead = require('nead');
 const Greeter = require('./Greeter');
 
@@ -965,6 +936,8 @@ module.exports = container;
 
 Then, use it in your tests:
 ```js
+// test/integration/index.js
+
 const container = require('../fixtures/container');
 
 const greeter = container.get('greeter');
@@ -999,6 +972,19 @@ You must keep test coverage at 100%.
 
 ## License
 [MIT](LICENSE)
+
+## TODO
+- upgrade validation error tracking (upgrade felv namespace)
+- add lib hacking helpers
+- add logging and dependency graph
+    A dependency graph is logged at debug level:
+    ```sh
+    |- program
+       |- greeterRegistry
+          |- greeter.friend
+          |- greeter.family
+          |- strangerGreeter
+    ```
 
 [build-image]: https://img.shields.io/travis/gnodi/nead.svg?style=flat
 [build-url]: https://travis-ci.org/gnodi/nead
