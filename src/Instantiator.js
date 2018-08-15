@@ -1,11 +1,11 @@
 'use strict';
 
 /**
- * @class ServiceInstantiator
+ * @class Instantiator
  */
-class ServiceInstantiator {
+class Instantiator {
   /**
-   * Instantiate a service.
+   * Instantiate an object.
    * @param {Object|Function} object - The base object or constructor.
    * @param {boolean} [isSingleton=false] - Whether or not it is a singleton object.
    * @returns {Object} The instance.
@@ -25,4 +25,4 @@ class ServiceInstantiator {
   }
 }
 
-module.exports = ServiceInstantiator;
+module.exports = Instantiator;

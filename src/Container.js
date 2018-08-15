@@ -8,7 +8,7 @@ const injector = Symbol('injector');
 const validator = Symbol('validator');
 const dependencySorter = Symbol('dependencySorter');
 const referenceResolver = Symbol('referenceResolver');
-const serviceInstantiator = Symbol('serviceInstantiator');
+const instantiator = Symbol('instantiator');
 const definitions = Symbol('definitions');
 const definitionFactories = Symbol('definitionFactories');
 const definitionValidators = Symbol('definitionValidators');
@@ -86,15 +86,16 @@ class Container {
 
   /**
    * Service instantiator.
-   * @type {ServiceInstantiator}
+   * @type {Instantiator}
    * @throws {TypeError} On unexpected value.
    */
-  set serviceInstantiator(value) {
+  set instantiator(value) {
     if (typeof value !== 'object' || !value.instantiate) {
       throw new BadTypeError(value, 'a service instantiator');
     }
 
-    this[serviceInstantiator] = value;
+    this[instantiator] = value;
+  }
   }
 
   /**
@@ -148,7 +149,8 @@ class Container {
     const dependencySortedDefinitions = this[dependencySorter].sort(this[definitions]);
 
     this[services] = dependencySortedDefinitions.reduce((map, definition) => {
-      const service = this[serviceInstantiator].instantiate(
+      // Instantiate service object.
+      const service = this[instantiator].instantiate(
         definition.object,
         definition.singleton
       );
@@ -209,7 +211,7 @@ Container.injector = injector;
 Container.validator = validator;
 Container.dependencySorter = dependencySorter;
 Container.referenceResolver = referenceResolver;
-Container.serviceInstantiator = serviceInstantiator;
+Container.instantiator = instantiator;
 Container.definitionFactories = definitionFactories;
 Container.getDefinitionFactory = getDefinitionFactory;
 Container.instantiateService = instantiateService;

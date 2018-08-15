@@ -15,7 +15,7 @@ const injector = require('../fixtures/injector');
 const validator = require('../fixtures/validator');
 const dependencySorter = require('../fixtures/dependencySorter');
 const referenceResolver = require('../fixtures/referenceResolver');
-const serviceInstantiator = require('../fixtures/serviceInstantiator');
+const instantiator = require('../fixtures/instantiator');
 const serviceDefinitionFactory = require('../fixtures/serviceDefinitionFactory');
 
 const container = new Container();
@@ -61,13 +61,13 @@ describe('Container', () => {
     });
   });
 
-  describe('"serviceInstantiator" setter', () => {
+  describe('"instantiator" setter', () => {
     it('should accept a service instantiator', () => {
-      container.serviceInstantiator = serviceInstantiator;
+      container.instantiator = instantiator;
     });
 
     it('should only accept a service instantiator', () => {
-      expect(() => { container.serviceInstantiator = 'foo'; }).to.throw(BadTypeError);
+      expect(() => { container.instantiator = 'foo'; }).to.throw(BadTypeError);
     });
   });
 

@@ -1,15 +1,15 @@
 'use strict';
 
 const expect = require('../expect');
-const ServiceInstantiator = require('../../src/ServiceInstantiator');
+const Instantiator = require('../../src/Instantiator');
 
-const serviceInstantiator = new ServiceInstantiator();
+const instantiator = new Instantiator();
 
-describe('ServiceInstantiator', () => {
+describe('Instantiator', () => {
   describe('"instantiate" method', () => {
     it('should instantiate a service from an object', () => {
       const prototype = {foo: 'bar'};
-      const instance = serviceInstantiator.instantiate(prototype);
+      const instance = instantiator.instantiate(prototype);
 
       expect(instance.foo).to.equal('bar');
       expect(Object.getPrototypeOf(instance)).to.equal(prototype);
@@ -19,7 +19,7 @@ describe('ServiceInstantiator', () => {
       class Class {
         get foo() { return 'bar'; }
       }
-      const instance = serviceInstantiator.instantiate(Class);
+      const instance = instantiator.instantiate(Class);
 
       expect(instance.foo).to.equal('bar');
       expect(Object.getPrototypeOf(instance)).to.equal(Class.prototype);
@@ -27,7 +27,7 @@ describe('ServiceInstantiator', () => {
 
     it('should instantiate a service from a singleton', () => {
       const singleton = {foo: 'bar'};
-      const instance = serviceInstantiator.instantiate(singleton, true);
+      const instance = instantiator.instantiate(singleton, true);
 
       expect(instance.foo).to.equal('bar');
       expect(instance).to.equal(singleton);
@@ -37,7 +37,7 @@ describe('ServiceInstantiator', () => {
       function foo() {
         return 'bar';
       }
-      const instance = serviceInstantiator.instantiate(foo, true);
+      const instance = instantiator.instantiate(foo, true);
 
       expect(instance()).to.equal('bar');
       expect(instance).to.equal(foo);
